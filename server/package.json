@@ -18,5 +18,9 @@
     "jasmine": "^2.5.3",
     "socket.io": "^1.7.3",
     "underscore": "^1.8.3"
+  },
+  "devDependencies": {
+    "@types/log4js": "0.0.32",
+    "log4js": "^1.1.0"
   }
 }

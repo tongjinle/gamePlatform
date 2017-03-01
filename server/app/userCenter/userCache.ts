@@ -1,9 +1,10 @@
 import * as _ from 'underscore';
+import User from './user';
 
-interface CacheItem { username: string, token: string, expire: number };
+interface CacheItem<T> { data: T, token: string, expire: number };
 
 class UserCache {
-    private cache: CacheItem[];
+    private cache: CacheItem<User>[];
     private CACHE_EXPIRE: number = 2 * 60 * 60 * 1000;
 
 
@@ -14,12 +15,13 @@ class UserCache {
     add(username: string): string {
         let token = this.genToken();
         let expire = this.genExpire();
-        this.cache.push({ username, token, expire });
+        let us = new User(username);
+        this.cache.push({ data: us, token, expire });
         return token;
     }
 
     remove(username: string) {
-        this.cache = _.filter(this.cache, item => item.username != username);
+        this.cache = _.filter(this.cache, item => item.data.name != username);
     }
 
     // token是否合法
@@ -38,7 +40,7 @@ class UserCache {
     // 通过token寻找username
     getUsername(token: string): string {
         let item = this.findCache(token);
-        return item ? item.username : undefined;
+        return item ? item.data.name : undefined;
     }
 
     // 刷新token
@@ -50,14 +52,14 @@ class UserCache {
         return true;
     }
 
-    
-    private genToken(len:number = 8): string {
+
+    private genToken(len: number = 8): string {
         // return '12345678';
         // let len = 8;
         return Math.floor(Math.random() * Math.pow(36, len)).toString(36);
     }
 
-    private findCache(token: string): CacheItem {
+    private findCache(token: string): CacheItem<User> {
         return _.find(this.cache, item => item.token == token);
     }
 
@@ -68,14 +70,8 @@ class UserCache {
 }
 
 
-let userCache = new UserCache();
-export default userCache;
-
-
-
-
-
-
-
-
-
+let usCache: UserCache;
+export let getUserCache = () => {
+    usCache = usCache || new UserCache();
+    return usCache
+};

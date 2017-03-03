@@ -82,17 +82,46 @@ abstract class Pathnode extends EventEmitter {
         }
 
         let info = this.userExtInfoList[index];
-        return value === undefined ?
-            info[key] :
+        if (undefined === value) {
+            return info[key];
+        } else {
             info[key] = value;
+            return true;
+        }
 
     }
 
     // 根据child的name来找到下级child
-    protected findChild(childName:string):Pathnode{
-        return _.find(this.children,ch=>ch.name == childName);
+    protected findChild(childName: string): Pathnode {
+        return _.find(this.children, ch => ch.name == childName);
     }
-    
+
+    // 增加child
+    protected addChild(child: Pathnode): boolean {
+        if(this.findChild(child.name)){
+            return false;
+        }
+        this.children.push(child);
+        return true;
+    }
+
+    // 删除child
+    protected removeChild(child: Pathnode): boolean {
+        if (!child) {
+            return false;
+        }
+        return this.removeChildByName(child.name);
+    }
+
+    protected removeChildByName(childName: string): boolean {
+        let index = _.findIndex(this.children, ch => ch.name == childName);
+        if (-1 == index) {
+            return false;
+        }
+        this.children.splice(index, 1);
+        return false;
+    }
+
 
     // 寻找user对应的下标
     protected findUserIndex(username: string): number {

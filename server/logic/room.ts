@@ -1,12 +1,12 @@
 import { IGame, IGameRule, IGameAction, IGameRst } from './IGame';
 import Pathnode from './pathnode';
 import PathnodeType from './pathnodeType';
-import { UserGameStatus } from '../status';
+import { UserGameStatus } from './status';
 import * as _ from 'underscore';
 import GameFactory from './gameFactory';
 import { EventEmitter } from 'events';
 import { readFile } from 'fs';
-import {PLATFORM_EVENTS} from '../events';
+import {PLATFORM_EVENTS} from './events';
 
 interface IPipeItem {
     (): boolean

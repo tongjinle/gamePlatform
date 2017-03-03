@@ -1,10 +1,13 @@
 import * as _ from 'underscore';
-import User from './user';
 
 interface CacheItem<T> { data: T, token: string, expire: number };
 
+interface IUser {
+    name: string;
+}
+
 class UserCache {
-    private cache: CacheItem<User>[];
+    private cache: CacheItem<IUser>[];
     private CACHE_EXPIRE: number = 2 * 60 * 60 * 1000;
 
 
@@ -15,7 +18,7 @@ class UserCache {
     add(username: string): string {
         let token = this.genToken();
         let expire = this.genExpire();
-        let us = new User(username);
+        let us = { name: username } as IUser;
         this.cache.push({ data: us, token, expire });
         return token;
     }
@@ -59,7 +62,7 @@ class UserCache {
         return Math.floor(Math.random() * Math.pow(36, len)).toString(36);
     }
 
-    private findCache(token: string): CacheItem<User> {
+    private findCache(token: string): CacheItem<IUser> {
         return _.find(this.cache, item => item.token == token);
     }
 

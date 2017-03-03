@@ -1,14 +1,56 @@
+import * as _ from 'underscore';
+import * as SocketServer from 'socket.io';
+import * as Http from 'http';
+
+
 import Channel from './channel';
 import Pathnode from './pathnode';
 import PathnodeType from './pathnodeType';
 import * as pfConfig from '../platformConfig';
-import * as _ from 'underscore';
-import 'socket.io';
+import { getUserCenter } from '../db/userCenter/userCenter';
+import { getUserCache } from '../db/userCenter/userCache';
+import CONFIG from './config';
+import { IChannelOpts } from './iChannel';
+import { IChatMsg } from './iChat';
+import {
+    PLATFORM_EVENTS,
+    IPlatformfUserJoin
+} from './events';
 
+import * as log4js from 'log4js';
+
+log4js.configure({
+    appenders: [
+        { type: 'console' },
+        {
+            type: 'dateFile',
+            filename: './logs/app.log',
+            "maxLogSize": 20480,
+            "backups": 3,
+            category: 'app'
+
+        }
+    ]
+});
+
+
+let logger = log4js.getLogger('app');
+
+let usCenter = getUserCenter();
+let usCache = getUserCache();
 class Platform extends Pathnode {
+    serv: Http.Server;
     io: SocketIO.Server;
-    constructor(io: SocketIO.Server) {
+    constructor() {
         super('platform', PathnodeType.platform);
+
+        this.serv = Http.createServer();
+        this.io = SocketServer(this.serv);
+
+
+        this.serv.listen(CONFIG.PORT, () => {
+            logger.debug(`start server at ${new Date().toTimeString()}`);
+        });
 
         this.initByConf(pfConfig);
         this.bind();
@@ -16,36 +58,159 @@ class Platform extends Pathnode {
 
     // 根据配置文件来生成频道
     initByConf(conf) {
-        _.each(conf.channelList, (chan: { name: string, gameType: string }) => {
-            this.addChannel(chan.name, chan.gameType);
+        _.each(conf.channelList, (chan: { name: string, gameType: string, maxUserCount: number, maxRoomCount: number }) => {
+            let opts = {
+                maxUserCount: chan.maxUserCount || 100,
+                maxRoomCount: chan.maxRoomCount || 20
+            } as IChannelOpts;
+            this.addChannel(chan.name, chan.gameType, opts);
         });
     }
 
-    private bind() { }
+
+    // ########################################################
+    // 建立username和socket的映射关系
+    // ########################################################
+    // socket相关
+    getSocket(username: string): SocketIO.Socket {
+        let so = this.extInfo(username, 'socket') as SocketIO.Socket;
+        return so;
+    }
+
+    setSocket(username: string, so: SocketIO.Socket): boolean {
+        return this.extInfo(username, 'socket', so) as boolean;
+    }
+
+    // ########################################################
+    // 频道相关
+    // ########################################################
+
+    // 查找频道
+    private findChannel(channalName: string): Channel {
+        return this.findChild(channalName) as Channel;
+    }
 
     // 创建频道
-    private addChannel(channelName: string, gameType: string) {
-        let ch = new Channel(channelName, gameType);
-        this.children.push(ch);
+    // 不能有重名的频道
+    private addChannel(channelName: string, gameType: string, opts: IChannelOpts): boolean {
+        let chan = new Channel(channelName, gameType, opts);
+        let ret = this.addChild(chan);
+
+
+        ret && this.fire(PLATFORM_EVENTS.CHANNEL_ADD, { channel: chan });
+        return ret;
     }
 
     // 暂停频道
-    private pauseChannel(channelName: string):boolean {
+    private pauseChannel(channelName: string): boolean {
         let chan = this.findChild(channelName) as Channel;
-        if(!chan){
+        if (!chan) {
             return false;
         }
-        
+
         chan.pause();
     }
 
 
     // 删除频道
-    private removeChannel(channelName: string) {
+    private removeChannel(channelName: string): boolean {
+        // before remove channel
+        let chan = this.findChannel(channelName);
+        if (chan) {
+            this.fire(PLATFORM_EVENTS.CHANNEL_REMOVE, { channel: chan });
+            let ret = this.removeChildByName(channelName);
+            return ret;
+        }
+        return false;
 
     }
 
-    // 
+    // ########################################################
+    // 相关绑定
+    // ########################################################
+    private bind() {
+        // ########################################################
+        // 绑定socket相关
+        // ########################################################
+        let io = this.io;
+
+        // 连接
+        io.on('connect', (so) => {
+            // 登陆
+            // 登陆之后 在默认的大厅中
+            so.on(PLATFORM_EVENTS.PLATFORM_USER_JOIN, (data: { username: string, password: string }) => {
+                let {username, password} = data;
+                usCenter.login(username, password, data => {
+                    let flag = data.flag;
+                    let token: string;
+
+                    if (data.flag) {
+                        this.fire(PLATFORM_EVENTS.PLATFORM_USER_JOIN, {});
+                        token = usCache.add(username);
+
+                        // 建立映射关系
+                        this.setSocket(username, so);
+                        // 进入房间
+
+                    }
+
+                    // to client
+                    so.emit(PLATFORM_EVENTS.PLATFORM_USER_JOIN, {
+                        flag,
+                        token
+                    });
+                });
+            });
+
+            // 进入某个频道
+            /*
+                频道是否存在
+                尝试加入
+            */
+
+            // 退出某个频道
+            /*
+                尝试退出
+            */
+
+            // 查询某个频道中所有房间
+
+            // 进入某个房间
+
+            // 退出某个房间
+
+            // 游戏操作信息
+
+            // 发送聊天信息
+            // 因为username和socket的映射关系,所以聊天的信息都是通过platform这个顶点来中转信息
+            so.on(PLATFORM_EVENTS.CHAT, (chatMsg: IChatMsg) => {
+
+            });
+
+        });
+
+
+
+        // ########################################################
+        // 绑定非socket相关
+        // ########################################################
+
+        // 用户进入大厅
+        // 绑定socket
+        this.on(PLATFORM_EVENTS.PLATFORM_USER_JOIN, (data: IPlatformfUserJoin) => {
+            let {username, socket} = data;
+            this.setSocket(username, socket);
+        });
+        // 加入socket的room -- platform
+        this.on(PLATFORM_EVENTS.PLATFORM_USER_JOIN, (data: IPlatformfUserJoin) => {
+            let username = data.username;
+            let so = data.socket;
+            so.join(this.name,()=>{
+                logger.debug(`${username}:${so.id} join room:${this.name}`);
+            });
+        });
+    }
+
 
 
 
@@ -53,3 +218,4 @@ class Platform extends Pathnode {
 }
 
 export default Platform;
+

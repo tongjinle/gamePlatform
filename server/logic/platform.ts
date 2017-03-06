@@ -3,9 +3,11 @@ import * as SocketServer from 'socket.io';
 import * as Http from 'http';
 
 
-import Channel from './channel';
 import Pathnode from './pathnode';
 import PathnodeType from './pathnodeType';
+import Channel from './channel';
+import Room from './room';
+
 import * as pfConfig from '../platformConfig';
 import { getUserCenter } from '../db/userCenter/userCenter';
 import { getUserCache } from '../db/userCenter/userCache';
@@ -14,7 +16,9 @@ import { IChannelOpts } from './iChannel';
 import { IChatMsg } from './iChat';
 import {
     PLATFORM_EVENTS,
-    IPlatformfUserJoin
+    IPlatformfUserJoin,
+
+    IPlatformUserJoin_C
 } from './events';
 
 import * as log4js from 'log4js';
@@ -41,12 +45,13 @@ let usCache = getUserCache();
 class Platform extends Pathnode {
     serv: Http.Server;
     io: SocketIO.Server;
+    map: { [username: string]: SocketIO.Socket };
     constructor() {
         super('platform', PathnodeType.platform);
 
         this.serv = Http.createServer();
         this.io = SocketServer(this.serv);
-
+        this.map = {};
 
         this.serv.listen(CONFIG.PORT, () => {
             logger.debug(`start server at ${new Date().toTimeString()}`);
@@ -80,6 +85,7 @@ class Platform extends Pathnode {
     setSocket(username: string, so: SocketIO.Socket): boolean {
         return this.extInfo(username, 'socket', so) as boolean;
     }
+
 
     // ########################################################
     // 频道相关
@@ -122,8 +128,8 @@ class Platform extends Pathnode {
             return ret;
         }
         return false;
-
     }
+
 
     // ########################################################
     // 相关绑定
@@ -136,37 +142,83 @@ class Platform extends Pathnode {
 
         // 连接
         io.on('connect', (so) => {
+
+            logger.debug(`[connect] socket.id:${so.id}`);
+            // io.use((so,next)=>{
+            //     logger.debug(so.request);
+            //     next();
+            // });
+
+            // // d.ts没有定义so.use
+            // so['use']((packet, next) => {
+            //     let evName: string = packet[0];
+            //     let data = packet[1];
+
+            //     if (PLATFORM_EVENTS.PLATFORM_USER_JOIN == evName) {
+            //         next();
+            //     } else {
+            //         let token = data['token'];
+            //         if (!usCache.isValid(token)) {
+            //             next(new Error('invalid token'));
+            //             logger.debug(`invalid token : ${token}`);
+            //         } else {
+            //             next();
+            //         }
+            //     }
+            // });
+
             // 登陆
             // 登陆之后 在默认的大厅中
             so.on(PLATFORM_EVENTS.PLATFORM_USER_JOIN, (data: { username: string, password: string }) => {
                 let {username, password} = data;
+                logger.debug(`${username} try to join platform`);
                 usCenter.login(username, password, data => {
                     let flag = data.flag;
                     let token: string;
 
                     if (data.flag) {
-                        this.fire(PLATFORM_EVENTS.PLATFORM_USER_JOIN, {});
-                        token = usCache.add(username);
-
-                        // 建立映射关系
-                        this.setSocket(username, so);
-                        // 进入房间
-
+                        so['username'] = username;
+                        let evData: IPlatformfUserJoin = {
+                            username,
+                            socket: so
+                        };
+                        this.fire(PLATFORM_EVENTS.PLATFORM_USER_JOIN, evData);
                     }
 
-                    // to client
-                    so.emit(PLATFORM_EVENTS.PLATFORM_USER_JOIN, {
-                        flag,
-                        token
-                    });
+                    so.emit(PLATFORM_EVENTS.PLATFORM_USER_JOIN, { flag });
                 });
             });
+
+            // 断开链接
+            so.on('disconnect', () => {
+                logger.debug(`[disconnect] socket.id:${so.id}`);
+
+                let username = so['username'];
+                let evData = { username };
+                this.fire(PLATFORM_EVENTS.PLATFORM_USER_LEAVE, evData);
+
+
+            });
+
 
             // 进入某个频道
             /*
                 频道是否存在
                 尝试加入
             */
+
+            so.on(PLATFORM_EVENTS.CHANNEL_USER_JOIN, (data: { channelName: string }) => {
+                let flag: boolean = false;
+                let {channelName} = data;
+                let username = so['username'];
+                let chan = this.findChannel(channelName);
+                if (chan) {
+                    flag = chan.addUser(username);
+                }
+                so.emit(PLATFORM_EVENTS.CHANNEL_USER_JOIN, {
+                    flag
+                });
+            });
 
             // 退出某个频道
             /*
@@ -187,7 +239,52 @@ class Platform extends Pathnode {
 
             });
 
+            // 查询某个socket房间的人数
+            so.on('userList.refresh', (data: { roomName: string }) => {
+                let {roomName} = data;
+                logger.info(`req userList.refresh:${roomName} `);
+                let ret: any = { flag: false };
+                let nodeList: Pathnode[] = [this];
+                while (nodeList.length) {
+
+                    let paNode = nodeList.pop();
+                    if (paNode.name == roomName) {
+                        let usernameList = paNode.usernameList;
+                        let userList = _.map(usernameList, username => {
+                            let status;
+                            if (PathnodeType.room == paNode.type) {
+                                status = (paNode as Room).getStatus(username);
+                            }
+                            return {
+                                username,
+                                status
+                            };
+                        });
+                        ret = {
+                            flag: true,
+                            type: 'all',
+                            roomName: paNode.name,
+                            roomType: paNode.type,
+                            userList
+                        };
+                        break;
+                    }
+                    if (paNode.children && paNode.children.length) {
+                        nodeList = nodeList.concat(paNode.children);
+                    }
+                }
+
+                so.emit('userList.refresh', ret);
+                if (!ret.flag) {
+                    logger.error(`req userList.refresh:${roomName} FAIL`);
+                }
+            });
+
         });
+
+        // io.on('reconnect',(so:SocketIO.Socket)=>{
+        //     logger.debug(`[reconnect] socket.id:${so.id}`);
+        // });
 
 
 
@@ -196,18 +293,69 @@ class Platform extends Pathnode {
         // ########################################################
 
         // 用户进入大厅
-        // 绑定socket
+        // 绑定socket和username之间的对应关系
         this.on(PLATFORM_EVENTS.PLATFORM_USER_JOIN, (data: IPlatformfUserJoin) => {
             let {username, socket} = data;
+            this.addUser(username);
             this.setSocket(username, socket);
         });
+        // 绑定socket
+        // to client
+        this.on(PLATFORM_EVENTS.PLATFORM_USER_JOIN, (data: IPlatformfUserJoin) => {
+            let username = data.username;
+            let so = data.socket;
+            let roomName = this.name;
+            let roomType = this.type;
+            so.join(roomName, () => {
+                logger.debug(`${username}:${so.id} join room:${this.name}`);
+            
+                so.emit(PLATFORM_EVENTS.SOCKET_ROOM_JOIN, {
+                    roomType,
+                    roomName
+                });
+            });
+        });
+
         // 加入socket的room -- platform
         this.on(PLATFORM_EVENTS.PLATFORM_USER_JOIN, (data: IPlatformfUserJoin) => {
             let username = data.username;
             let so = data.socket;
-            so.join(this.name,()=>{
-                logger.debug(`${username}:${so.id} join room:${this.name}`);
+            let roomName = this.name;
+            let roomType = this.type;
+
+            // 告知其他user我进入了platform
+            let cliData: IPlatformUserJoin_C = { username };
+            so.broadcast.to(roomName).emit('userList.refresh', {
+                flag:true,
+                type: 'add',
+                roomName,
+                roomType,
+                userList: [{
+                    username
+                }]
             });
+        });
+
+        // 断线
+        this.on(PLATFORM_EVENTS.PLATFORM_USER_LEAVE, (data: { username: string }) => {
+            let {username} = data;
+            let flag = this.removeUser(username);
+
+            if (flag) {
+                let roomName = this.name;
+                let roomType = this.type;
+
+                // platform上的userList更新
+                io.to(this.name).emit('userList.refresh', {
+                    flag:true,
+                    type: 'remove',
+                    roomName,
+                    roomType,
+                    userList: [{
+                        username
+                    }]
+                });
+            }
         });
     }
 

@@ -1,4 +1,8 @@
 const PLATFORM_EVENTS = {
+    // 账户登录
+    LOGIN:"login",
+    LOGOUT:"logout",
+
     // 平台操作
     PLATFORM_USER_JOIN: "platform_user_join",
     PLATFORM_USER_LEAVE: "platform_user_leave",
@@ -22,14 +26,17 @@ const PLATFORM_EVENTS = {
     ROOM_USER_LEAVE: "room_user_leave",
     ROOM_USER_READY: "room_user_ready",
 
-
-    // 
+    // 进入
+    SOCKET_ROOM_JOIN:"socket_room_join",
 
     // 聊天
     CHAT: "chat",
 
     // 游戏操作
-    GAME_ACT: "game_act"
+    GAME_ACT: "game_act",
+
+    // 用户在
+    SOCKET_ROOM_REFRESH:"socket_room_refresh"
 
 
 
@@ -38,13 +45,18 @@ const PLATFORM_EVENTS = {
 
 import * as SocketServer from 'socket.io';
 // 事件的数据结构
+
+// server端内部数据结构
 interface IPlatformfUserJoin {
     username:string;
     socket:SocketIO.Socket;
 }
 
 
-
+// to client的数据结构
+interface IPlatformUserJoin_C{
+    username:string;
+}
 
 
 
@@ -63,5 +75,22 @@ export {
     PLATFORM_EVENTS,
 
     // 事件的数据结构
-    IPlatformfUserJoin
+    // sever内部
+    IPlatformfUserJoin,
+
+
+    // to client
+    IPlatformUserJoin_C
+
 };
+
+
+
+
+
+
+
+
+
+
+

@@ -1,5 +1,5 @@
 class config {
-    static PORT: number = 3000;
+    static PORT: number = 9527;
 
     static MSG_CENTER:string = 'MSG_CENTER';
 }

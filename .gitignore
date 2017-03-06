@@ -1,2 +1,3 @@
 *.log
 server/dist
+server/logs

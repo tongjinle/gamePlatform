@@ -130,6 +130,50 @@ class Platform extends Pathnode {
         return false;
     }
 
+    // 聊天
+    // from 和 toList都是username
+    chat(chMsg: IChatMsg) {
+        let {roomName, from, msg, toList} = chMsg;
+        let flag = true;
+        let paNode = this.name == roomName ?
+            this :
+            this.findDescendant(roomName);
+
+        // 不存在这样的pathnode
+        if (!paNode) {
+            logger.warn('chat', `no such pathnode:${roomName}`);
+            return;
+        }
+
+
+        //
+
+        let io = this.io;
+        let frSocket = this.getSocket(from);
+
+        let msgBag = { from, msg, isPrivate: false };
+
+        if (!toList) {
+            io.to(roomName).emit(PLATFORM_EVENTS.CHAT, msgBag);
+            logger.info('chat', JSON.stringify(chMsg));
+        } else {
+            msgBag.isPrivate = true;
+            _.each(toList, to => {
+                // to应该在这个pathnode中
+                if (~paNode.findUserIndex(to)) {
+                    let so = this.getSocket(to);
+                    io.to(roomName).sockets[so.id].emit(PLATFORM_EVENTS.CHAT, msgBag);
+                    logger.info(`private chat`, `${from} chat to ${to} : ${msg} `);
+                }
+            });
+            if (toList.length) {
+                let so = this.getSocket(from);
+                io.to(roomName).sockets[so.id].emit(PLATFORM_EVENTS.CHAT, msgBag);
+
+            }
+        }
+    }
+
 
     // ########################################################
     // 相关绑定
@@ -236,42 +280,36 @@ class Platform extends Pathnode {
             // 发送聊天信息
             // 因为username和socket的映射关系,所以聊天的信息都是通过platform这个顶点来中转信息
             so.on(PLATFORM_EVENTS.CHAT, (chatMsg: IChatMsg) => {
-
+                chatMsg.from = so['username'];
+                this.chat(chatMsg);
             });
 
             // 查询某个socket房间的人数
             so.on('userList.refresh', (data: { roomName: string }) => {
                 let {roomName} = data;
-                logger.info(`req userList.refresh:${roomName} `);
+                logger.info(`req userList.refresh:${roomName}`);
                 let ret: any = { flag: false };
-                let nodeList: Pathnode[] = [this];
-                while (nodeList.length) {
 
-                    let paNode = nodeList.pop();
-                    if (paNode.name == roomName) {
-                        let usernameList = paNode.usernameList;
-                        let userList = _.map(usernameList, username => {
-                            let status;
-                            if (PathnodeType.room == paNode.type) {
-                                status = (paNode as Room).getStatus(username);
-                            }
-                            return {
-                                username,
-                                status
-                            };
-                        });
-                        ret = {
-                            flag: true,
-                            type: 'all',
-                            roomName: paNode.name,
-                            roomType: paNode.type,
-                            userList
+                let taNode = this.name == roomName ? this : this.findDescendant(name);
+                if (taNode) {
+                    let usernameList = taNode.usernameList;
+                    let userList = _.map(usernameList, username => {
+                        let status;
+                        if (PathnodeType.room == taNode.type) {
+                            status = (taNode as Room).getStatus(username);
+                        }
+                        return {
+                            username,
+                            status
                         };
-                        break;
-                    }
-                    if (paNode.children && paNode.children.length) {
-                        nodeList = nodeList.concat(paNode.children);
-                    }
+                    });
+                    ret = {
+                        flag: true,
+                        type: 'all',
+                        roomName: taNode.name,
+                        roomType: taNode.type,
+                        userList
+                    };
                 }
 
                 so.emit('userList.refresh', ret);
@@ -281,10 +319,6 @@ class Platform extends Pathnode {
             });
 
         });
-
-        // io.on('reconnect',(so:SocketIO.Socket)=>{
-        //     logger.debug(`[reconnect] socket.id:${so.id}`);
-        // });
 
 
 
@@ -308,7 +342,7 @@ class Platform extends Pathnode {
             let roomType = this.type;
             so.join(roomName, () => {
                 logger.debug(`${username}:${so.id} join room:${this.name}`);
-            
+
                 so.emit(PLATFORM_EVENTS.SOCKET_ROOM_JOIN, {
                     roomType,
                     roomName
@@ -326,7 +360,7 @@ class Platform extends Pathnode {
             // 告知其他user我进入了platform
             let cliData: IPlatformUserJoin_C = { username };
             so.broadcast.to(roomName).emit('userList.refresh', {
-                flag:true,
+                flag: true,
                 type: 'add',
                 roomName,
                 roomType,
@@ -347,7 +381,7 @@ class Platform extends Pathnode {
 
                 // platform上的userList更新
                 io.to(this.name).emit('userList.refresh', {
-                    flag:true,
+                    flag: true,
                     type: 'remove',
                     roomName,
                     roomType,

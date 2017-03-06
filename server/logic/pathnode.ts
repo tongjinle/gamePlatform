@@ -48,6 +48,10 @@ abstract class Pathnode extends EventEmitter {
         }
     }
 
+    // 寻找user对应的下标
+    findUserIndex(username: string): number {
+        return _.findIndex(this.usernameList, us => us == username);
+    }
 
 
     // 增加用户
@@ -74,7 +78,7 @@ abstract class Pathnode extends EventEmitter {
         return true;
     }
 
-    protected extInfo(username: string, key: string, value?: any) {
+    extInfo(username: string, key: string, value?: any) {
         let index = this.findUserIndex(username);
 
         if (-1 == index) {
@@ -91,14 +95,29 @@ abstract class Pathnode extends EventEmitter {
 
     }
 
+    // 查找子孙
+    findDescendant(name: string): Pathnode {
+        let open = this.children;
+        while (open.length) {
+            let curr = open.pop();
+            if (curr.name == name) {
+                return curr;
+            }
+            if (curr.children && curr.children.length) {
+                open = open.concat(curr.children);
+            }
+        }
+    }
+
+
     // 根据child的name来找到下级child
-    protected findChild(childName: string): Pathnode {
+    findChild(childName: string): Pathnode {
         return _.find(this.children, ch => ch.name == childName);
     }
 
     // 增加child
-    protected addChild(child: Pathnode): boolean {
-        if(this.findChild(child.name)){
+    addChild(child: Pathnode): boolean {
+        if (this.findChild(child.name)) {
             return false;
         }
         this.children.push(child);
@@ -106,14 +125,14 @@ abstract class Pathnode extends EventEmitter {
     }
 
     // 删除child
-    protected removeChild(child: Pathnode): boolean {
+    removeChild(child: Pathnode): boolean {
         if (!child) {
             return false;
         }
         return this.removeChildByName(child.name);
     }
 
-    protected removeChildByName(childName: string): boolean {
+    removeChildByName(childName: string): boolean {
         let index = _.findIndex(this.children, ch => ch.name == childName);
         if (-1 == index) {
             return false;
@@ -123,10 +142,7 @@ abstract class Pathnode extends EventEmitter {
     }
 
 
-    // 寻找user对应的下标
-    protected findUserIndex(username: string): number {
-        return _.findIndex(this.usernameList, us => us == username);
-    }
+    
 }
 
 

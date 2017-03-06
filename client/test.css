@@ -1,0 +1,20 @@
+#userList{}
+#userList .currUsername{color:white;background-color: green;}
+
+#chatBox,#toList{
+    width: 400px;
+}
+#chatList .from{
+    width:100px;
+    color:steelblue;
+}
+#chatList .msg{
+    color:olive;
+}
+
+#sendMsg{
+    font-size: 32px;
+    width: 120px;
+    height: 80px;
+    cursor: pointer;
+}

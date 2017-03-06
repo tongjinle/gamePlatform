@@ -1,6 +1,10 @@
 // 聊天数据格式
 interface IChatMsg {
-    pathnodeName: string;
+    // socket room
+    roomName:string;
+    from:string;
+    msg:string;
+    toList?:string[];
 
 }
 

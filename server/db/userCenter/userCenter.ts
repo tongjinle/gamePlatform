@@ -1,5 +1,11 @@
+/*
+    用户中心,用以跟数据库沟通
+    ** 此处暂时用userCache来做处理
+*/
+
 import { getUserCache } from './userCache';
 let usCache = getUserCache();
+
 
 class UserCenter {
 

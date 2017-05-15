@@ -1,3 +1,13 @@
+/*
+    Pathnode是整个游戏平台树的各个节点的类型
+    1 father和children,用以维护树状结构
+    2 fire,依赖于[1]中的结构,分别完成"冒泡"和"广播"事件
+    3 由于平台相对简单,只考虑3层深度,所以depth方法简单处理(platform为0 channel为1 room为2)
+    4 节点同时维护身处节点中的user列表
+        如果user处于某节点中,则必定处于其父节点中,直到根节点
+    5 为了可以自定义user的属性,使用extInfo(username: string, key: string, value?: any)函数,风格同jquery
+*/
+
 import PathnodeType from './pathnodeType';
 import * as _ from 'underscore';
 import { EventEmitter } from 'events';
@@ -10,10 +20,10 @@ abstract class Pathnode extends EventEmitter {
     type: PathnodeType;
     father: Pathnode;
     children: Pathnode[];
-    // 深度 channel为0 room为1
+    // 深度 platform为0 channel为1 room为2
     private _depth: number;
     public get depth(): number {
-        return [PathnodeType.channel, PathnodeType.room].indexOf(this.type);
+        return [PathnodeType.platform, PathnodeType.channel, PathnodeType.room].indexOf(this.type);
     }
     // 用户列表
     usernameList: string[];
@@ -98,7 +108,7 @@ abstract class Pathnode extends EventEmitter {
 
     // 增加child
     protected addChild(child: Pathnode): boolean {
-        if(this.findChild(child.name)){
+        if (this.findChild(child.name)) {
             return false;
         }
         this.children.push(child);

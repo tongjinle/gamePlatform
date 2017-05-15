@@ -1,3 +1,17 @@
+/*
+    平台类
+    0 处理socketIO相关的
+    1 维护user跟其所建立的socket之间的关系
+        setSocket和getSocket来完成
+    2 维护频道
+        新增 addChannel
+        删除 removeChannel
+        查找 findChannel
+        暂停 pauseChannel
+    
+        ** 简单的使用配置文件来批量新增频道
+        initByConf(conf)
+*/
 import * as _ from 'underscore';
 import * as SocketServer from 'socket.io';
 import * as Http from 'http';
@@ -6,7 +20,7 @@ import * as Http from 'http';
 import Channel from './channel';
 import Pathnode from './pathnode';
 import PathnodeType from './pathnodeType';
-import * as pfConfig from '../platformConfig';
+
 import { getUserCenter } from '../db/userCenter/userCenter';
 import { getUserCache } from '../db/userCenter/userCache';
 import CONFIG from './config';
@@ -16,25 +30,8 @@ import {
     PLATFORM_EVENTS,
     IPlatformfUserJoin
 } from './events';
+import logger from "./logIns";
 
-import * as log4js from 'log4js';
-
-log4js.configure({
-    appenders: [
-        { type: 'console' },
-        {
-            type: 'dateFile',
-            filename: './logs/app.log',
-            "maxLogSize": 20480,
-            "backups": 3,
-            category: 'app'
-
-        }
-    ]
-});
-
-
-let logger = log4js.getLogger('app');
 
 let usCenter = getUserCenter();
 let usCache = getUserCache();
@@ -52,7 +49,6 @@ class Platform extends Pathnode {
             logger.debug(`start server at ${new Date().toTimeString()}`);
         });
 
-        this.initByConf(pfConfig);
         this.bind();
     }
 
@@ -144,14 +140,10 @@ class Platform extends Pathnode {
                     let flag = data.flag;
                     let token: string;
 
+                    // 触发事件
                     if (data.flag) {
-                        this.fire(PLATFORM_EVENTS.PLATFORM_USER_JOIN, {});
-                        token = usCache.add(username);
-
-                        // 建立映射关系
-                        this.setSocket(username, so);
-                        // 进入房间
-
+                        let data:IPlatformfUserJoin = {username,socket:so};
+                        this.fire(PLATFORM_EVENTS.PLATFORM_USER_JOIN, data);
                     }
 
                     // to client
@@ -184,7 +176,8 @@ class Platform extends Pathnode {
             // 发送聊天信息
             // 因为username和socket的映射关系,所以聊天的信息都是通过platform这个顶点来中转信息
             so.on(PLATFORM_EVENTS.CHAT, (chatMsg: IChatMsg) => {
-
+                let {pathnodeName} = chatMsg;
+                so.to(pathnodeName).emit(PLATFORM_EVENTS.CHAT,chatMsg);
             });
 
         });
@@ -201,12 +194,12 @@ class Platform extends Pathnode {
             let {username, socket} = data;
             this.setSocket(username, socket);
         });
+
         // 加入socket的room -- platform
         this.on(PLATFORM_EVENTS.PLATFORM_USER_JOIN, (data: IPlatformfUserJoin) => {
-            let username = data.username;
-            let so = data.socket;
-            so.join(this.name,()=>{
-                logger.debug(`${username}:${so.id} join room:${this.name}`);
+            let {username, socket} = data;
+            socket.join(this.name,()=>{
+                logger.debug(`${username}:${socket.id} join room:${this.name}`);
             });
         });
     }

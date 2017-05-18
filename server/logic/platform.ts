@@ -26,10 +26,20 @@ import { getUserCache } from '../db/userCenter/userCache';
 import CONFIG from './config';
 import { IChannelOpts } from './iChannel';
 import { IChatMsg } from './iChat';
-import { PLATFORM_EVENTS } from './events';
+import {
+    TO_CLIENT_EVENTS,
+    PLATFORM_EVENTS
+} from './events';
 import logger from "./logIns";
-import './dataStruct';
+import {
+    IReqLoginData,
+    IResLoginData,
+    IResUserJoinData,
 
+    ILoginData,
+    IUserJoinData,
+    IUserLeaveData
+} from './dataStruct';
 
 
 let usCenter = getUserCenter();
@@ -133,7 +143,7 @@ class Platform extends Pathnode {
         io.on('connect', (so) => {
             // 登陆
             // 登陆之后 在默认的大厅中
-            so.on(PLATFORM_EVENTS.LOGIN, (data: IReqLoginData) => {
+            so.on(TO_CLIENT_EVENTS.LOGIN, (data: IReqLoginData) => {
                 let { username, password } = data;
                 usCenter.login(username, password, data => {
                     let flag = data.flag;
@@ -143,7 +153,7 @@ class Platform extends Pathnode {
                     {
                         let speSocket = io.sockets.sockets[so.id];
                         let data: IResLoginData = { flag };
-                        speSocket.emit(PLATFORM_EVENTS.LOGIN, data)
+                        speSocket.emit(TO_CLIENT_EVENTS.LOGIN, data)
                     }
 
                     if (!flag)
@@ -154,15 +164,21 @@ class Platform extends Pathnode {
                         let data: ILoginData = { username, socketId: so.id };
                         this.fire(PLATFORM_EVENTS.LOGIN, data);
                     }
-                    // 触发进入pathnode时间
+                    // 触发进入pathnode
                     {
-                        let data: IUserJoinData = { pathnodeName: this.name, username };
+                        let data: IUserJoinData = {
+                            pathnodeType: PathnodeType.platform,
+                            pathnodeName: this.name,
+                            username,
+                            socketId: so.id
+                        };
+                        this.fire(PLATFORM_EVENTS.USER_JOIN, data);
                     }
 
                     // 通知有人进入节点
                     {
-                        let data: IUserJoinData = { pathnodeName: this.name, username };
-                        so.broadcast.emit(PLATFORM_EVENTS.ON_USER_JOIN, data);
+                        let data: IResUserJoinData = { pathnodeName: this.name, username };
+                        so.broadcast.emit(PLATFORM_EVENTS.USER_JOIN, data);
                     }
                 });
             });
@@ -201,22 +217,71 @@ class Platform extends Pathnode {
         // 绑定非socket相关
         // ########################################################
 
-        // 用户进入大厅
-        // 绑定socket
-        // this.on(PLATFORM_EVENTS.ON_USER_JOIN, (data: IUserJoinData) => {
-        //     let { username, socket } = data;
-        //     this.setSocket(username, socket);
-        // });
+        // 用户登录,绑定socket
+        this.on(PLATFORM_EVENTS.LOGIN, (data: IUserJoinData) => {
+            let { username, socketId } = data;
+            this.setSocket(username, socketId);
+        });
 
-        // // 加入socket的room -- platform
-        // this.on(PLATFORM_EVENTS.PLATFORM_USER_JOIN, (data: IPlatformfUserJoin) => {
-        //     let { username, socket } = data;
-        //     socket.join(this.name, () => {
-        //         logger.debug(`${username}:${socket.id} join room:${this.name}`);
-        //     });
-        // });
+        // 用户进入节点
+        this.on(PLATFORM_EVENTS.USER_JOIN, (data: IUserJoinData) => {
+            let { pathnodeName, pathnodeType, username, socketId } = data;
+            let socket = this.getSocketBySid(socketId);
+
+            let node = this.findPathnode(pathnodeType, pathnodeName);
+            if (node) {
+                // 进入socket的房间
+                socket.join(pathnodeName, () => {
+                    logger.debug(`${username}:${socket.id} join room:${this.name}`);
+                });
+
+                // 进入节点
+                node.addUser(username);
+
+            }
+        });
+
+        // 用户离开节点
+        this.on(PLATFORM_EVENTS.USER_LEAVE, (data: IUserLeaveData) => {
+            let {username,socketId} = data;
+            let root: Pathnode = this;
+            let open = [root];
+            let stack = [];
+
+            while(open.length){
+                let curr = open.pop();
+                if(-1!=curr.findUserIndex(username)){
+                    stack.push(curr);
+                    open = curr.children;
+                }
+            }
+
+            let socket = this.getSocketBySid(socketId);
+            stack.reverse().forEach((node:Pathnode)=>{
+                node.removeUser(username);
+
+                socket.leave(node.name);
+            });
+        });
+
     }
 
+    private getSocketBySid(socketId: string): SocketIO.Socket {
+        return this.io.sockets.sockets[socketId];
+    }
+
+    private findPathnode(type: PathnodeType, name: string): Pathnode {
+        let root: Pathnode = this;
+        let open = [root];
+        while (open.length) {
+            let curr = open.pop();
+            if (type == curr.type && name == curr.name) {
+                return curr;
+            }
+            open = open.concat(curr.children);
+        }
+        return undefined;
+    }
 
 
 

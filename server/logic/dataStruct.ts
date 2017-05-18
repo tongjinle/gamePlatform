@@ -1,23 +1,34 @@
-interface IReqLoginData{
+import PathnodeType from './pathnodeType';
+
+// ##### to client event #####
+export interface IReqLoginData{
 	username:string;
 	password:string;
 }
 
-interface IResLoginData{
+export interface IResLoginData{
 	flag:boolean;
 }
 
-interface IResUserJoinData{
+export interface IResUserJoinData{
 	pathnodeName:string;
 	username:string;
 }
 
-// ##### inner event #####
-interface ILoginData{
+// ##### platform event #####
+export interface ILoginData{
 
 }
 
-interface IUserJoinData{
+export interface IUserJoinData{
 	pathnodeName:string;
+	pathnodeType:PathnodeType;
 	username:string;
+	socketId:string;
+}
+
+
+export interface IUserLeaveData{
+	username:string;
+	socketId:string;
 }

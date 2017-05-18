@@ -84,6 +84,11 @@ abstract class Pathnode extends EventEmitter {
         return true;
     }
 
+    // 寻找user对应的下标
+    findUserIndex(username: string): number {
+        return _.findIndex(this.usernameList, us => us == username);
+    }
+
     protected extInfo(username: string, key: string, value?: any) {
         let index = this.findUserIndex(username);
 
@@ -133,10 +138,7 @@ abstract class Pathnode extends EventEmitter {
     }
 
 
-    // 寻找user对应的下标
-    protected findUserIndex(username: string): number {
-        return _.findIndex(this.usernameList, us => us == username);
-    }
+
 }
 
 

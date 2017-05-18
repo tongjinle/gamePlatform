@@ -1,6 +1,16 @@
 import * as SocketServer from 'socket.io';
 import * as _ from 'underscore';
 
+let TO_CLIENT_EVENTS = {
+    LOGIN: "",
+    LOGOUT: "",
+
+    CHAT: "",
+
+    USER_JOIN: ""
+
+};
+
 let PLATFORM_EVENTS = {
     // 平台操作
     LOGIN: "",
@@ -20,7 +30,7 @@ let PLATFORM_EVENTS = {
     ROOM_REMOVE: "",
     ROOM_DISPOSE: "",
 
-    ROOM_USER_READY:"",
+    ROOM_USER_READY: "",
 
 
 
@@ -34,31 +44,35 @@ let PLATFORM_EVENTS = {
     GAME_ACT: "",
 
     // 加入某个pathnode
-    ON_USER_JOIN: "",
+    USER_JOIN: "",
 
     // 离开某个pathnode
-    ON_USER_LEAVE: "",
+    USER_LEAVE: ""
 
-    // 接受到聊天信息
-    ON_CHAT: ""
 
 
 };
 
-// simple map
-for (let key in PLATFORM_EVENTS) {
-    let str: string = key.split('_')
-        .map((str, i) => {
-            if (i == 0) {
-                return str.toLowerCase();
-            } else {
-                return str[0].toUpperCase() + str.slice(1).toLowerCase();
-            }
-        })
-        .join('');
+let proc = (obj, prefix) => {
+    for (let key in obj) {
+        let str: string = key.split('_')
+            .map((str, i) => {
+                if (i == 0) {
+                    return str.toLowerCase();
+                } else {
+                    return str[0].toUpperCase() + str.slice(1).toLowerCase();
+                }
+            })
+            .join('');
 
-    PLATFORM_EVENTS[key] = str;
-}
+        obj[key] = prefix + str;
+    }
+};
+
+proc(TO_CLIENT_EVENTS, "");
+proc(PLATFORM_EVENTS, "platform_");
+
+
 
 
 
@@ -77,6 +91,6 @@ for (let key in PLATFORM_EVENTS) {
 
 export {
     PLATFORM_EVENTS,
+    TO_CLIENT_EVENTS
 
-    
 };

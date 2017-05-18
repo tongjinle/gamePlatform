@@ -26,11 +26,10 @@ import { getUserCache } from '../db/userCenter/userCache';
 import CONFIG from './config';
 import { IChannelOpts } from './iChannel';
 import { IChatMsg } from './iChat';
-import {
-    PLATFORM_EVENTS,
-    IPlatformfUserJoin
-} from './events';
+import { PLATFORM_EVENTS } from './events';
 import logger from "./logIns";
+import './dataStruct';
+
 
 
 let usCenter = getUserCenter();
@@ -68,13 +67,13 @@ class Platform extends Pathnode {
     // 建立username和socket的映射关系
     // ########################################################
     // socket相关
-    getSocket(username: string): SocketIO.Socket {
-        let so = this.extInfo(username, 'socket') as SocketIO.Socket;
-        return so;
+    getSocket(username: string): string {
+        let socketId = this.extInfo(username, 'socket') as string;
+        return socketId;
     }
 
-    setSocket(username: string, so: SocketIO.Socket): boolean {
-        return this.extInfo(username, 'socket', so) as boolean;
+    setSocket(username: string, socketId: string): boolean {
+        return this.extInfo(username, 'socket', socketId) as boolean;
     }
 
     // ########################################################
@@ -134,23 +133,37 @@ class Platform extends Pathnode {
         io.on('connect', (so) => {
             // 登陆
             // 登陆之后 在默认的大厅中
-            so.on(PLATFORM_EVENTS.PLATFORM_USER_JOIN, (data: { username: string, password: string }) => {
-                let {username, password} = data;
+            so.on(PLATFORM_EVENTS.LOGIN, (data: IReqLoginData) => {
+                let { username, password } = data;
                 usCenter.login(username, password, data => {
                     let flag = data.flag;
                     let token: string;
 
-                    // 触发事件
-                    if (data.flag) {
-                        let data:IPlatformfUserJoin = {username,socket:so};
-                        this.fire(PLATFORM_EVENTS.PLATFORM_USER_JOIN, data);
+                    // 登录回执
+                    {
+                        let speSocket = io.sockets.sockets[so.id];
+                        let data: IResLoginData = { flag };
+                        speSocket.emit(PLATFORM_EVENTS.LOGIN, data)
                     }
 
-                    // to client
-                    so.emit(PLATFORM_EVENTS.PLATFORM_USER_JOIN, {
-                        flag,
-                        token
-                    });
+                    if (!flag)
+                        return;
+
+                    // 触发login事件
+                    {
+                        let data: ILoginData = { username, socketId: so.id };
+                        this.fire(PLATFORM_EVENTS.LOGIN, data);
+                    }
+                    // 触发进入pathnode时间
+                    {
+                        let data: IUserJoinData = { pathnodeName: this.name, username };
+                    }
+
+                    // 通知有人进入节点
+                    {
+                        let data: IUserJoinData = { pathnodeName: this.name, username };
+                        so.broadcast.emit(PLATFORM_EVENTS.ON_USER_JOIN, data);
+                    }
                 });
             });
 
@@ -176,8 +189,8 @@ class Platform extends Pathnode {
             // 发送聊天信息
             // 因为username和socket的映射关系,所以聊天的信息都是通过platform这个顶点来中转信息
             so.on(PLATFORM_EVENTS.CHAT, (chatMsg: IChatMsg) => {
-                let {pathnodeName} = chatMsg;
-                so.to(pathnodeName).emit(PLATFORM_EVENTS.CHAT,chatMsg);
+                let { pathnodeName } = chatMsg;
+                so.to(pathnodeName).emit(PLATFORM_EVENTS.CHAT, chatMsg);
             });
 
         });
@@ -190,18 +203,18 @@ class Platform extends Pathnode {
 
         // 用户进入大厅
         // 绑定socket
-        this.on(PLATFORM_EVENTS.PLATFORM_USER_JOIN, (data: IPlatformfUserJoin) => {
-            let {username, socket} = data;
-            this.setSocket(username, socket);
-        });
+        // this.on(PLATFORM_EVENTS.ON_USER_JOIN, (data: IUserJoinData) => {
+        //     let { username, socket } = data;
+        //     this.setSocket(username, socket);
+        // });
 
-        // 加入socket的room -- platform
-        this.on(PLATFORM_EVENTS.PLATFORM_USER_JOIN, (data: IPlatformfUserJoin) => {
-            let {username, socket} = data;
-            socket.join(this.name,()=>{
-                logger.debug(`${username}:${socket.id} join room:${this.name}`);
-            });
-        });
+        // // 加入socket的room -- platform
+        // this.on(PLATFORM_EVENTS.PLATFORM_USER_JOIN, (data: IPlatformfUserJoin) => {
+        //     let { username, socket } = data;
+        //     socket.join(this.name, () => {
+        //         logger.debug(`${username}:${socket.id} join room:${this.name}`);
+        //     });
+        // });
     }
 
 

@@ -103,7 +103,7 @@ class Room extends Pathnode {
     // 离开房间
     leave(username: string): boolean {
         let ret = this.removeUser(username);
-        this.fire(PLATFORM_EVENTS.ROOM_USER_LEAVE);
+        this.fire(PLATFORM_EVENTS.ON_USER_LEAVE);
         return ret;
     }
 

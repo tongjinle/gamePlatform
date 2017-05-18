@@ -20,6 +20,7 @@ let PLATFORM_EVENTS = {
     ROOM_REMOVE: "",
     ROOM_DISPOSE: "",
 
+    ROOM_USER_READY:"",
 
 
 
@@ -60,14 +61,6 @@ for (let key in PLATFORM_EVENTS) {
 }
 
 
-// 事件的数据结构
-interface IPlatformfUserJoin {
-    username: string;
-    socket: SocketIO.Socket;
-}
-
-
-
 
 
 
@@ -85,6 +78,5 @@ interface IPlatformfUserJoin {
 export {
     PLATFORM_EVENTS,
 
-    // 事件的数据结构
-    IPlatformfUserJoin
+    
 };

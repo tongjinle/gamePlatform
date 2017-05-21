@@ -50,11 +50,14 @@ class Platform extends Pathnode {
     constructor() {
         super('platform', PathnodeType.platform);
 
-        this.serv = Http.createServer();
+        this.serv = Http.createServer()
         this.io = SocketServer(this.serv);
 
 
         this.serv.listen(CONFIG.PORT, () => {
+            let addrInfo = this.serv.address();
+            logger.debug(`server address : ${addrInfo.address}`);
+            logger.debug(`server port : ${addrInfo.port}`);
             logger.debug(`start server at ${new Date().toTimeString()}`);
         });
 
@@ -181,6 +184,11 @@ class Platform extends Pathnode {
                         so.broadcast.emit(PLATFORM_EVENTS.USER_JOIN, data);
                     }
                 });
+            });
+
+            // 登出
+            so.on("disconnect",()=>{
+                console.log("disconnect");
             });
 
             // 进入某个频道

@@ -2,6 +2,7 @@ import * as _ from "underscore";
 import * as $ from "jquery";
 import * as io from "socket.io-client";
 import * as async from "async";
+import Reqs from "./reqs";
 
 let so: SocketIOClient.Socket = io("http://localhost:9527");
 let $login: JQuery,
@@ -10,13 +11,18 @@ let $login: JQuery,
     $chatBox: JQuery
     ;
 
-let username;
-let reqs: { [name: string]: Function } = {};
+let g_username: string;
+let g_token: string;
+
+const RECEIVER_KEY = 'isPrivateReceiver';
+const RECEIVER_CLASS = 'privateReceiver';
+
+let reqs: Reqs;
 
 async.parallel([
     (cb) => {
         $(() => {
-            $('body').html("hello world1!");
+            $('body').html(new Date().toLocaleTimeString());
             let $login = $('#login');
             let $pathnode = $('#pathnode');
             cb();
@@ -38,8 +44,6 @@ function start() {
     bindSocket();
     bindEvent();
 }
-
-_.forEach([1, 21], n => console.log(n));
 
 
 // 初始化页面
@@ -70,7 +74,13 @@ function bindSocket() {
     });
 
 
-    so.on("chat", (data: {}) => { });
+    so.on("chat", (data: { flag: boolean, username: string, message: string, isPrivate: boolean, timeStamp: number }) => {
+        let { flag, username, message, isPrivate, timeStamp } = data;
+        if (flag) {
+            $chatBox.find('.messageList').append(createMessageHtml(username, message, isPrivate, timeStamp));
+        }
+
+    });
 }
 
 
@@ -78,7 +88,7 @@ function bindSocket() {
 function bindEvent() {
     // login
     $login.click(function() {
-        username = $login.find('.username').val();
+        let username = $login.find('.username').val();
         let password = $login.find('.password').val();
         reqs['login'](username, password);
     });
@@ -86,39 +96,42 @@ function bindEvent() {
     // chat
     $chatBox.find('.sendMessage').click(function() {
         let message: string = $chatBox.find('.inputbox').val();
-        let to: string = "";
+        let to: string = getPrivateReceiver();
         if (!message.length) {
             reqs['chat'](message, to);
         }
     });
 
+    // select private receiver
+    $userlist.on('click', '.username', function() {
+        let key = RECEIVER_KEY;
+        let className = RECEIVER_CLASS;
+        let flag: boolean = $(this).data(key);
+        $(this).data(key, !flag)
+        if (flag) {
+            $(this).addClass(className);
+
+        } else {
+            $(this).removeClass(className);
+        }
+        $(this).siblings('.username').data(key, false)
+            .removeClass(className);;
+    });
+
+    // enter subPathnode
+    // todo
+
 }
 
 function initReqs() {
-
-    let reqs: { [name: string]: Function } = {};
-    // 登陆
-    reqs['login'] = function(username: string, password: string) {
-        so.emit('login', { username, password });
-    };
-
-    // 登出
-    reqs['logout'] = function() {
-        so.emit('logout');
-    };
-
-    // 获取用户
-    reqs['userlist'] = function(pathnodeName: string, token: string) {
-        so.emit('userlist', { pathnodeName, token });
-    };
-
-    // 聊天
-    reqs['chat'] = function(message: string, to?: string) {
-        so.emit('chat', { message, to });
-    };
-
-    return reqs;
+    reqs = new Reqs(so);
 }
+
+// 获取子级pathnode列表
+function getSubPathnodeList(){
+    // todo
+}
+
 
 
 // 生成user节点
@@ -142,4 +155,16 @@ function createMessageHtml(username: string, message: string, isPrivate: boolean
             <span class="timestamp">${timeFormat(timeStamp)}</span>
         </div>
     `;
+}
+
+// 获取私密对象
+function getPrivateReceiver(): string {
+    let receiver: string = undefined;
+    $userlist.find('.username').each(function(i, n) {
+        if ($(this).data(RECEIVER_KEY)) {
+            receiver = $(this).text();
+            return false;
+        }
+    });
+    return receiver;
 }

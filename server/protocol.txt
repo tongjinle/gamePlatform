@@ -40,6 +40,19 @@ req:{
 	message:string
 }
 
+route:"subPathnodeList"
+req:null
+res:{
+	flag:boolean,
+	subPathnodeList:{
+		pathnodeName:string,
+		currUserCount:number,
+		maxUserCount:number,
+		status:number
+	}[]
+}
+
+
 ##### PUSH #####
 1. 发送聊天信息
 route:"onChat"

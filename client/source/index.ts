@@ -62,7 +62,8 @@ function bindSocket() {
         $pathnode.toggle(flag);
 
         if (flag) {
-
+            reqs.userlist();
+            reqs.subPathnodeList();
         }
     });
 
@@ -90,7 +91,7 @@ function bindEvent() {
     $login.click(function() {
         let username = $login.find('.username').val();
         let password = $login.find('.password').val();
-        reqs['login'](username, password);
+        reqs.login(username, password);
     });
 
     // chat
@@ -98,7 +99,7 @@ function bindEvent() {
         let message: string = $chatBox.find('.inputbox').val();
         let to: string = getPrivateReceiver();
         if (!message.length) {
-            reqs['chat'](message, to);
+            reqs.chat(message, to);
         }
     });
 
@@ -127,9 +128,21 @@ function initReqs() {
     reqs = new Reqs(so);
 }
 
-// 获取子级pathnode列表
-function getSubPathnodeList(){
+// 生成子级pathnode列表
+function createSubPathnodeList(pathnodeName: string, currUserCount: number, maxUserCount: number, status: number) {
     // todo
+    let statusFormat = (status: number): string => {
+        let className: string;
+        className = ['', '', ''][status];
+        return className;
+    };
+    return `
+        <div class="subPathnode">
+            <span class="status ${statusFormat(status)}"></span>
+            <span class="pathnodeName">${pathnodeName}</span>
+            <span class="userCount">${currUserCount}/${maxUserCount}</span>
+        </div>
+    `;
 }
 
 

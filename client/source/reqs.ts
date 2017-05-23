@@ -16,14 +16,21 @@ class Reqs{
     };
 
     // 获取用户
-    userlist(pathnodeName: string, token: string) {
-        this.so.emit('userlist', { pathnodeName, token });
+    userlist() {
+        this.so.emit('userlist');
     };
 
     // 聊天
     chat(message: string, to?: string) {
         this.so.emit('chat', { message, to });
     };
+
+    // 获取子节点信息
+    subPathnodeList(){
+        this.so.emit('subPathnodeList');
+    }
+
+    
 }
 
 export default Reqs; 

@@ -8,7 +8,7 @@
 
 
 import * as _ from 'underscore';
-import {CACHE_EXPIRE} from './conf';
+import { CACHE_EXPIRE } from './conf';
 
 
 interface CacheItem<T> { data: T, token: string, expire: number };
@@ -38,6 +38,10 @@ class UserCache {
 
     remove(username: string) {
         this.cache = _.filter(this.cache, item => item.data.name != username);
+    }
+
+    find(username: string): CacheItem<IUser> {
+        return _.find(this.cache, item => item.data.name == username);
     }
 
     // token是否合法

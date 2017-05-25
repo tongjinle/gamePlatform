@@ -9,9 +9,11 @@
 */
 
 import PathnodeType from './pathnodeType';
+import PathnodeStatus from './PathnodeStatus';
 import * as _ from 'underscore';
 import { EventEmitter } from 'events';
 import IUser from './iUser';
+import logger from './logIns';
 
 abstract class Pathnode extends EventEmitter {
     // eg: '华东区' '围棋' '第一桌'诸如此类
@@ -29,7 +31,8 @@ abstract class Pathnode extends EventEmitter {
     usernameList: string[];
     // 用户信息
     private userExtInfoList: { [key: string]: any }[];
-
+    // 状态
+    status: PathnodeStatus;
 
     constructor(name: string, type: PathnodeType) {
         super();
@@ -42,6 +45,8 @@ abstract class Pathnode extends EventEmitter {
 
         this.father = undefined;
         this.children = [];
+        this.status = PathnodeStatus.open;
+
     }
 
     // 触发事件
@@ -66,6 +71,7 @@ abstract class Pathnode extends EventEmitter {
         if (-1 == index) {
             this.usernameList.push(username);
             this.userExtInfoList.push({});
+            logger.info(`pathnode[${this.name}] addUser[${username}]`);
             return true;
         }
         return false;
@@ -79,6 +85,7 @@ abstract class Pathnode extends EventEmitter {
             return false;
         }
 
+        logger.info(`pathnode[${this.name}] removeUser[${username}]`);
         this.usernameList.splice(index, 1);
         this.userExtInfoList.splice(index, 1);
         return true;
@@ -93,6 +100,7 @@ abstract class Pathnode extends EventEmitter {
         let index = this.findUserIndex(username);
 
         if (-1 == index) {
+            logger.error(`invalid username:${username}`);
             throw 'invalid username';
         }
 

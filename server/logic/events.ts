@@ -7,7 +7,12 @@ let TO_CLIENT_EVENTS = {
 
     CHAT: "",
 
-    USER_JOIN: ""
+    USER_JOIN: "",
+    USER_LEAVE:"",
+
+    USER_LIST:"",
+
+    SUB_PATHNODE_LIST:""
 
 };
 

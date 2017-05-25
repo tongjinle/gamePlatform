@@ -37,6 +37,7 @@ import {
     IResUserJoinData,
 
     ILoginData,
+    ILogoutData,
     IUserJoinData,
     IUserLeaveData
 } from './dataStruct';
@@ -88,6 +89,7 @@ class Platform extends Pathnode {
     setSocket(username: string, socketId: string): boolean {
         return this.extInfo(username, 'socket', socketId) as boolean;
     }
+
 
     // ########################################################
     // 频道相关
@@ -154,13 +156,11 @@ class Platform extends Pathnode {
 
                     // 登录回执
                     {
-                        let speSocket = io.sockets.sockets[so.id];
                         let data: IResLoginData = { flag };
-                        speSocket.emit(TO_CLIENT_EVENTS.LOGIN, data)
+                        so.emit(TO_CLIENT_EVENTS.LOGIN, data)
                     }
 
-                    if (!flag)
-                        return;
+                    if (!flag) { return; }
 
                     // 触发login事件
                     {
@@ -181,14 +181,24 @@ class Platform extends Pathnode {
                     // 通知有人进入节点
                     {
                         let data: IResUserJoinData = { pathnodeName: this.name, username };
-                        so.broadcast.emit(PLATFORM_EVENTS.USER_JOIN, data);
+                        so.broadcast.emit(TO_CLIENT_EVENTS.USER_JOIN, data);
                     }
                 });
             });
-
             // 登出
-            so.on("disconnect",()=>{
-                console.log("disconnect");
+            so.on("disconnect", () => {
+                let username: string;
+                username = this.getUsernameBySid(so.id);
+                usCenter.logout(username, data => {
+                    let { flag } = data;
+                    if (flag) {
+                        let data: ILogoutData = { username, socketId: so.id };
+                        this.fire(PLATFORM_EVENTS.LOGOUT, data);
+                        logger.debug(`${username}:${so.id} logout succ`);
+                    } else {
+                        logger.debug(`${username}:${so.id} logout fail`);
+                    }
+                });
             });
 
             // 进入某个频道
@@ -203,6 +213,17 @@ class Platform extends Pathnode {
             */
 
             // 查询某个频道中所有房间
+            so.on(TO_CLIENT_EVENTS.SUB_PATHNODE_LIST, () => {
+                let subPathnodeList = _.map(this.children, ch => {
+                    return {
+                        pathnodeName: ch.name,
+                        currUserCount: ch.usernameList.length,
+                        maxUserCount: 100,
+                        status: ch.status
+                    }
+                });
+                so.emit(TO_CLIENT_EVENTS.SUB_PATHNODE_LIST, subPathnodeList);
+            });
 
             // 进入某个房间
 
@@ -210,11 +231,17 @@ class Platform extends Pathnode {
 
             // 游戏操作信息
 
+            // 获取用户列表
+            so.on(TO_CLIENT_EVENTS.USER_LIST, () => {
+                let userList = this.usernameList;
+                so.emit(TO_CLIENT_EVENTS.USER_LIST, userList);
+            });
+
             // 发送聊天信息
             // 因为username和socket的映射关系,所以聊天的信息都是通过platform这个顶点来中转信息
-            so.on(PLATFORM_EVENTS.CHAT, (chatMsg: IChatMsg) => {
+            so.on(TO_CLIENT_EVENTS.CHAT, (chatMsg: IChatMsg) => {
                 let { pathnodeName } = chatMsg;
-                so.to(pathnodeName).emit(PLATFORM_EVENTS.CHAT, chatMsg);
+                so.to(pathnodeName).emit(TO_CLIENT_EVENTS.CHAT, chatMsg);
             });
 
         });
@@ -226,9 +253,17 @@ class Platform extends Pathnode {
         // ########################################################
 
         // 用户登录,绑定socket
-        this.on(PLATFORM_EVENTS.LOGIN, (data: IUserJoinData) => {
+        this.on(PLATFORM_EVENTS.LOGIN, (data: ILoginData) => {
             let { username, socketId } = data;
+            this.addUser(username);
             this.setSocket(username, socketId);
+        });
+
+        // 用户登出
+        this.on(PLATFORM_EVENTS.LOGOUT,(data:ILogoutData)=>{
+            let { username, socketId } = data;
+            this.setSocket(username,undefined);
+            this.removeUser(username);
         });
 
         // 用户进入节点
@@ -251,21 +286,21 @@ class Platform extends Pathnode {
 
         // 用户离开节点
         this.on(PLATFORM_EVENTS.USER_LEAVE, (data: IUserLeaveData) => {
-            let {username,socketId} = data;
+            let { username, socketId } = data;
             let root: Pathnode = this;
             let open = [root];
             let stack = [];
 
-            while(open.length){
+            while (open.length) {
                 let curr = open.pop();
-                if(-1!=curr.findUserIndex(username)){
+                if (-1 != curr.findUserIndex(username)) {
                     stack.push(curr);
                     open = curr.children;
                 }
             }
 
             let socket = this.getSocketBySid(socketId);
-            stack.reverse().forEach((node:Pathnode)=>{
+            stack.reverse().forEach((node: Pathnode) => {
                 node.removeUser(username);
 
                 socket.leave(node.name);
@@ -276,6 +311,17 @@ class Platform extends Pathnode {
 
     private getSocketBySid(socketId: string): SocketIO.Socket {
         return this.io.sockets.sockets[socketId];
+    }
+
+    private getUsernameBySid(socketId: string): string {
+        let username: string;
+        username = _.find(this.usernameList, username => {
+            let sid: string = this.getSocket(username);
+            if (sid == socketId) {
+                return true;
+            }
+        });
+        return username;
     }
 
     private findPathnode(type: PathnodeType, name: string): Pathnode {

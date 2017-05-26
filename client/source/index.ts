@@ -7,8 +7,8 @@ import Reqs from "./reqs";
 let so: SocketIOClient.Socket = io("http://localhost:9527");
 let $login: JQuery,
     $pathnode: JQuery,
-    $userlist: JQuery,
-    $chatBox: JQuery
+    $userList: JQuery,
+    $chatbox: JQuery
     ;
 
 let g_username: string;
@@ -22,9 +22,12 @@ let reqs: Reqs;
 async.parallel([
     (cb) => {
         $(() => {
-            $('body').html(new Date().toLocaleTimeString());
-            let $login = $('#login');
-            let $pathnode = $('#pathnode');
+            // $('body').html(new Date().toLocaleTimeString());
+            $login = $('#login');
+            $pathnode = $('#pathnode');
+            $chatbox = $('#chatbox');
+            $userList = $('#pathnode .userList');
+            $pathnode = $('#pathnode');
             cb();
         });
     },
@@ -50,6 +53,9 @@ function start() {
 function initPage() {
     $login.show();
     $pathnode.hide();
+
+    // for easy test
+    $login.find('.username').val('falcon');
 }
 
 
@@ -62,15 +68,21 @@ function bindSocket() {
         $pathnode.toggle(flag);
 
         if (flag) {
-            reqs.userlist();
+            reqs.userList();
             reqs.subPathnodeList();
+        } else {
+            alert("login fail...");
         }
     });
 
-    so.on("userlist", (data: { flag: boolean, userlist: string[] }) => {
+    so.on('reconnect', () => {
+        console.log('reconnect success');
+    });
+
+    so.on("userList", (data: { flag: boolean, userList: string[] }) => {
         let { flag } = data;
         if (flag) {
-            $userlist.append(_.map(data.userlist, createUserHtml));
+            $userList.append(_.map(data.userList, createUserHtml).join(''));
         }
     });
 
@@ -78,9 +90,22 @@ function bindSocket() {
     so.on("chat", (data: { flag: boolean, username: string, message: string, isPrivate: boolean, timeStamp: number }) => {
         let { flag, username, message, isPrivate, timeStamp } = data;
         if (flag) {
-            $chatBox.find('.messageList').append(createMessageHtml(username, message, isPrivate, timeStamp));
+            $chatbox.find('.messageList').append(createMessageHtml(username, message, isPrivate, timeStamp));
         }
 
+    });
+
+    so.on("subPathnodeList", (data: { flag: boolean, subPathnodeList: { pathnodeName: string, currUserCount: number, maxUserCount: number, status: number }[] }) => {
+        let { flag, subPathnodeList } = data;
+        if (flag) {
+            let html: string = _.map(subPathnodeList, subPathnode => {
+                let { pathnodeName, currUserCount, maxUserCount, status } = subPathnode;
+                return createSubPathnodeHtml(pathnodeName, currUserCount, maxUserCount, status);
+            }).join('');
+            
+            $pathnode.find('.subPathnodeList')
+                .append(html);
+        }
     });
 }
 
@@ -88,15 +113,21 @@ function bindSocket() {
 // 主要用于
 function bindEvent() {
     // login
-    $login.click(function() {
+    $login.find('.login').click(function() {
         let username = $login.find('.username').val();
         let password = $login.find('.password').val();
         reqs.login(username, password);
     });
 
+    // cancel
+    $login.find('.cancel').click(function() {
+        $login.find('.username').val('');
+        $login.find('.password').val('');
+    });
+
     // chat
-    $chatBox.find('.sendMessage').click(function() {
-        let message: string = $chatBox.find('.inputbox').val();
+    $chatbox.find('.sendMessage').click(function() {
+        let message: string = $chatbox.find('.inputbox').val();
         let to: string = getPrivateReceiver();
         if (!message.length) {
             reqs.chat(message, to);
@@ -104,7 +135,7 @@ function bindEvent() {
     });
 
     // select private receiver
-    $userlist.on('click', '.username', function() {
+    $userList.on('click', '.username', function() {
         let key = RECEIVER_KEY;
         let className = RECEIVER_CLASS;
         let flag: boolean = $(this).data(key);
@@ -129,7 +160,7 @@ function initReqs() {
 }
 
 // 生成子级pathnode列表
-function createSubPathnodeList(pathnodeName: string, currUserCount: number, maxUserCount: number, status: number) {
+function createSubPathnodeHtml(pathnodeName: string, currUserCount: number, maxUserCount: number, status: number) {
     // todo
     let statusFormat = (status: number): string => {
         let className: string;
@@ -173,7 +204,7 @@ function createMessageHtml(username: string, message: string, isPrivate: boolean
 // 获取私密对象
 function getPrivateReceiver(): string {
     let receiver: string = undefined;
-    $userlist.find('.username').each(function(i, n) {
+    $userList.find('.username').each(function(i, n) {
         if ($(this).data(RECEIVER_KEY)) {
             receiver = $(this).text();
             return false;

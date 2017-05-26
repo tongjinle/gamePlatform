@@ -16,8 +16,8 @@ class Reqs{
     };
 
     // 获取用户
-    userlist() {
-        this.so.emit('userlist');
+    userList() {
+        this.so.emit('userList');
     };
 
     // 聊天
@@ -30,7 +30,7 @@ class Reqs{
         this.so.emit('subPathnodeList');
     }
 
-    
+
 }
 
 export default Reqs; 

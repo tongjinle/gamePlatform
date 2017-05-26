@@ -38,9 +38,14 @@ import {
 
     ILoginData,
     ILogoutData,
+    IChannelAddData,
+    IChannelRemoveData,
     IUserJoinData,
     IUserLeaveData
 } from './dataStruct';
+
+import { IPlatformConfig } from '../platformConfig';
+
 
 
 let usCenter = getUserCenter();
@@ -66,8 +71,8 @@ class Platform extends Pathnode {
     }
 
     // 根据配置文件来生成频道
-    initByConf(conf) {
-        _.each(conf.channelList, (chan: { name: string, gameType: string, maxUserCount: number, maxRoomCount: number }) => {
+    initByConf(conf: IPlatformConfig) {
+        _.each(conf.channelList, (chan) => {
             let opts = {
                 maxUserCount: chan.maxUserCount || 100,
                 maxRoomCount: chan.maxRoomCount || 20
@@ -105,7 +110,6 @@ class Platform extends Pathnode {
     private addChannel(channelName: string, gameType: string, opts: IChannelOpts): boolean {
         let chan = new Channel(channelName, gameType, opts);
         let ret = this.addChild(chan);
-
 
         ret && this.fire(PLATFORM_EVENTS.CHANNEL_ADD, { channel: chan });
         return ret;
@@ -160,6 +164,9 @@ class Platform extends Pathnode {
                         so.emit(TO_CLIENT_EVENTS.LOGIN, data)
                     }
 
+                    logger.debug(`req login: ${username}:${so.id} ${flag ? 'succ' : 'fail'}`);
+
+
                     if (!flag) { return; }
 
                     // 触发login事件
@@ -194,10 +201,8 @@ class Platform extends Pathnode {
                     if (flag) {
                         let data: ILogoutData = { username, socketId: so.id };
                         this.fire(PLATFORM_EVENTS.LOGOUT, data);
-                        logger.debug(`${username}:${so.id} logout succ`);
-                    } else {
-                        logger.debug(`${username}:${so.id} logout fail`);
                     }
+                    logger.debug(`req logout: ${username}:${so.id} ${flag ? 'succ' : 'fail'}`);
                 });
             });
 
@@ -222,7 +227,7 @@ class Platform extends Pathnode {
                         status: ch.status
                     }
                 });
-                so.emit(TO_CLIENT_EVENTS.SUB_PATHNODE_LIST, subPathnodeList);
+                so.emit(TO_CLIENT_EVENTS.SUB_PATHNODE_LIST, { flag: true, subPathnodeList });
             });
 
             // 进入某个房间
@@ -234,7 +239,8 @@ class Platform extends Pathnode {
             // 获取用户列表
             so.on(TO_CLIENT_EVENTS.USER_LIST, () => {
                 let userList = this.usernameList;
-                so.emit(TO_CLIENT_EVENTS.USER_LIST, userList);
+                logger.info(`req userlist: ${userList.join('|')}`);
+                so.emit(TO_CLIENT_EVENTS.USER_LIST, { flag: true, userList });
             });
 
             // 发送聊天信息
@@ -260,10 +266,14 @@ class Platform extends Pathnode {
         });
 
         // 用户登出
-        this.on(PLATFORM_EVENTS.LOGOUT,(data:ILogoutData)=>{
+        this.on(PLATFORM_EVENTS.LOGOUT, (data: ILogoutData) => {
             let { username, socketId } = data;
-            this.setSocket(username,undefined);
+            this.setSocket(username, undefined);
             this.removeUser(username);
+        });
+
+        this.on(PLATFORM_EVENTS.CHANNEL_ADD, (data: IChannelAddData) => {
+            logger.info(`add channel: ${data.channel.name}`);
         });
 
         // 用户进入节点
@@ -275,7 +285,7 @@ class Platform extends Pathnode {
             if (node) {
                 // 进入socket的房间
                 socket.join(pathnodeName, () => {
-                    logger.debug(`${username}:${socket.id} join room:${this.name}`);
+                    logger.info(`${username}:${socket.id} join room:${this.name}`);
                 });
 
                 // 进入节点

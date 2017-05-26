@@ -1,5 +1,5 @@
 import PathnodeType from './pathnodeType';
-
+import Channel from './channel';
 // ##### to client event #####
 export interface IReqLoginData {
 	username: string;
@@ -24,6 +24,14 @@ export interface ILoginData {
 export interface ILogoutData {
 	username: string;
 	socketId: string;
+}
+
+export interface IChannelAddData{
+	channel:Channel
+}
+export interface IChannelRemoveData{
+	channel:Channel
+	
 }
 
 export interface IUserJoinData {

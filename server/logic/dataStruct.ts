@@ -1,3 +1,4 @@
+import * as SocketServer from "socket.io";
 import PathnodeType from './pathnodeType';
 import Channel from './channel';
 // ##### to client event #####
@@ -8,9 +9,17 @@ export interface IReqLoginData {
 
 export interface IResLoginData {
 	flag: boolean;
+	username:string;
 }
 
 export interface IResUserJoinData {
+	flag:boolean;
+	pathnodeName: string;
+	username: string;
+}
+
+export interface IResUserLeaveData {
+	flag:boolean;
 	pathnodeName: string;
 	username: string;
 }
@@ -31,18 +40,20 @@ export interface IChannelAddData{
 }
 export interface IChannelRemoveData{
 	channel:Channel
-	
+
 }
 
 export interface IUserJoinData {
 	pathnodeName: string;
-	pathnodeType: PathnodeType;
+	pathnodeType: PathnodeType;	
 	username: string;
 	socketId: string;
 }
 
 
 export interface IUserLeaveData {
+	pathnodeName: string;
+	pathnodeType: PathnodeType;
 	username: string;
-	socketId: string;
+	socket: SocketIO.Socket;
 }

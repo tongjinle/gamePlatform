@@ -74,6 +74,7 @@ abstract class Pathnode extends EventEmitter {
             logger.info(`pathnode[${this.name}] addUser[${username}]`);
             return true;
         }
+        logger.debug(`${index},false`);
         return false;
     }
 
@@ -93,6 +94,7 @@ abstract class Pathnode extends EventEmitter {
 
     // 寻找user对应的下标
     findUserIndex(username: string): number {
+        logger.debug(this.usernameList.join('|'));
         return _.findIndex(this.usernameList, us => us == username);
     }
 

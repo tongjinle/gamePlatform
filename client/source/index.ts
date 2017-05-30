@@ -4,7 +4,12 @@ import * as io from "socket.io-client";
 import * as async from "async";
 import Reqs from "./reqs";
 
-let so: SocketIOClient.Socket = io("http://localhost:9527");
+let opts: SocketIOClient.ConnectOpts = {
+    reconnection: false,
+    // autoConnect:false,
+    forceNew: true
+};
+let so: SocketIOClient.Socket = io("http://localhost:9527", opts);
 let $login: JQuery,
     $pathnode: JQuery,
     $userList: JQuery,
@@ -56,18 +61,22 @@ function initPage() {
 
     // for easy test
     $login.find('.username').val('falcon');
+    $login.find('.username').click(function() {
+        $(this).val('dino');
+    });
 }
 
 
 
 // 主要用于接受来自server的信息
 function bindSocket() {
-    so.on("login", (data: { flag: boolean }) => {
-        let { flag } = data;
+    so.on("login", (data: { flag: boolean, username: string }) => {
+        let { flag, username } = data;
         $login.toggle(!flag);
         $pathnode.toggle(flag);
 
         if (flag) {
+            g_username = username;
             reqs.userList();
             reqs.subPathnodeList();
         } else {
@@ -82,15 +91,37 @@ function bindSocket() {
     so.on("userList", (data: { flag: boolean, userList: string[] }) => {
         let { flag } = data;
         if (flag) {
-            $userList.append(_.map(data.userList, createUserHtml).join(''));
+            $userList
+                .empty()
+                .append(_.map(data.userList, createUserHtml).join(''));
+        }
+    });
+
+    so.on("userJoin", (data: { flag: boolean, pathnodeName: string, username: string }) => {
+        let { flag, pathnodeName, username } = data;
+        if (flag) {
+            $userList.append(createUserHtml(username));
+        }
+    });
+
+    so.on("userLeave", (data: { flag: boolean, pathnodeName: string, username: string }) => {
+        let { flag, pathnodeName, username } = data;
+        if (flag) {
+            $userList
+                .find(".username")
+                .each(function() {
+                    if ($(this).text() == username) {
+                        $(this).remove();
+                    }
+                });
         }
     });
 
 
-    so.on("chat", (data: { flag: boolean, username: string, message: string, isPrivate: boolean, timeStamp: number }) => {
-        let { flag, username, message, isPrivate, timeStamp } = data;
+    so.on("chat", (data: { flag: boolean, username: string, message: string, isPrivate: boolean, timestamp: number }) => {
+        let { flag, username, message, isPrivate, timestamp } = data;
         if (flag) {
-            $chatbox.find('.messageList').append(createMessageHtml(username, message, isPrivate, timeStamp));
+            $chatbox.find('.messageList').append(createMessageHtml(username, message, isPrivate, timestamp));
         }
 
     });
@@ -102,10 +133,15 @@ function bindSocket() {
                 let { pathnodeName, currUserCount, maxUserCount, status } = subPathnode;
                 return createSubPathnodeHtml(pathnodeName, currUserCount, maxUserCount, status);
             }).join('');
-            
+
             $pathnode.find('.subPathnodeList')
                 .append(html);
         }
+    });
+
+    so.on('disconnect', () => {
+        $login.toggle(true);
+        $pathnode.toggle(false);
     });
 }
 
@@ -129,17 +165,25 @@ function bindEvent() {
     $chatbox.find('.sendMessage').click(function() {
         let message: string = $chatbox.find('.inputbox').val();
         let to: string = getPrivateReceiver();
-        if (!message.length) {
+        if (message.length) {
             reqs.chat(message, to);
         }
+    });
+    $chatbox.find('.clearMessage').click(function() {
+         $chatbox.find('.inputbox').val('');
     });
 
     // select private receiver
     $userList.on('click', '.username', function() {
+        // 不能对自己私密
+        if ($(this).text() == g_username) {
+            return;
+        }
+
         let key = RECEIVER_KEY;
         let className = RECEIVER_CLASS;
-        let flag: boolean = $(this).data(key);
-        $(this).data(key, !flag)
+        let flag: boolean = !$(this).data(key);
+        $(this).data(key, flag);
         if (flag) {
             $(this).addClass(className);
 
@@ -185,18 +229,18 @@ function createUserHtml(username: string) {
 
 
 // 生成message节点
-function createMessageHtml(username: string, message: string, isPrivate: boolean, timeStamp: number) {
-    let timeFormat = (timeStamp: number) => {
-        let time = new Date(timeStamp);
+function createMessageHtml(username: string, message: string, isPrivate: boolean, timestamp: number) {
+    let timeFormat = (timestamp: number) => {
+        let time = new Date(timestamp);
         let str = [time.getHours(), time.getMinutes(), time.getSeconds()].join(':');
         return str;
     };
 
     return `
-        <div class="message"> 
+        <div class="message ${username==g_username?'isSelf':''}"> 
             <span class="username">${username}</span>
             <span class="text ${isPrivate ? 'private' : ''}">${message}</span>
-            <span class="timestamp">${timeFormat(timeStamp)}</span>
+            <span class="timestamp">${timeFormat(timestamp)}</span>
         </div>
     `;
 }

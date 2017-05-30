@@ -24,6 +24,21 @@ export interface IResUserLeaveData {
 	username: string;
 }
 
+export interface IReqChat{
+	message:string;
+	// to是对某人的私人聊天
+	to?:string;
+}
+
+export interface IResChat{
+	flag:boolean;
+	username:string;
+	message:string;
+	// to是对某人的私人聊天
+	isPrivate:boolean;	
+	timestamp:number;
+}
+
 // ##### platform event #####
 export interface ILoginData {
 	username: string;

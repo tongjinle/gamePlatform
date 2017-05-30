@@ -25,7 +25,6 @@ import { getUserCenter } from '../db/userCenter/userCenter';
 import { getUserCache } from '../db/userCenter/userCache';
 import CONFIG from './config';
 import { IChannelOpts } from './iChannel';
-import { IChatMsg } from './iChat';
 import {
     TO_CLIENT_EVENTS,
     PLATFORM_EVENTS
@@ -36,6 +35,8 @@ import {
     IResLoginData,
     IResUserJoinData,
     IResUserLeaveData,
+    IReqChat,
+    IResChat,
 
     ILoginData,
     ILogoutData,
@@ -201,7 +202,7 @@ class Platform extends Pathnode {
                     usCenter.logout(username);
                 }
                 {
-                    let data: IUserLeaveData = { username,socket:so, pathnodeName: 'platform', pathnodeType: PathnodeType.platform };
+                    let data: IUserLeaveData = { username, socket: so, pathnodeName: 'platform', pathnodeType: PathnodeType.platform };
                     this.fire(PLATFORM_EVENTS.USER_LEAVE, data);
                 }
                 logger.info(`req logout: ${username}:${so.id}`);
@@ -246,9 +247,23 @@ class Platform extends Pathnode {
 
             // 发送聊天信息
             // 因为username和socket的映射关系,所以聊天的信息都是通过platform这个顶点来中转信息
-            so.on(TO_CLIENT_EVENTS.CHAT, (chatMsg: IChatMsg) => {
-                let { pathnodeName } = chatMsg;
-                so.to(pathnodeName).emit(TO_CLIENT_EVENTS.CHAT, chatMsg);
+            so.on(TO_CLIENT_EVENTS.CHAT, (chatMsg: IReqChat) => {
+                let { message, to } = chatMsg;
+                let username = this.getUsernameBySid(so.id);
+                let isPrivate: boolean = !!to;
+                let timestamp = Date.now();
+                let flag: boolean = true;
+
+
+                let data: IResChat = { flag, username, message, isPrivate, timestamp };
+                logger.info(`req chat:`, data);
+                so.emit(TO_CLIENT_EVENTS.CHAT, data);
+                if (isPrivate) {
+                    let otherSo = this.getSocketBySid(this.getSocket(to));
+                    otherSo.emit(TO_CLIENT_EVENTS.CHAT, data);
+                } else {
+                    so.broadcast.emit(TO_CLIENT_EVENTS.CHAT, data);
+                }
             });
 
         });

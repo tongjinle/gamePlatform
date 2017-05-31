@@ -167,7 +167,7 @@ class Platform extends Pathnode {
                         so.emit(TO_CLIENT_EVENTS.LOGIN, data)
                     }
 
-                    logger.info(`req login: ${username}:${so.id} ${flag ? 'succ' : 'fail'}`);
+                    logger.info(`req login: ${username}:${password}:${so.id} ${flag ? 'succ' : 'fail'}`);
 
 
                     if (flag) {
@@ -229,6 +229,7 @@ class Platform extends Pathnode {
                         status: ch.status
                     }
                 });
+                logger.info(`req subPathnodeList: ${_.map(subPathnodeList,n=>n.pathnodeName)}`);
                 so.emit(TO_CLIENT_EVENTS.SUB_PATHNODE_LIST, { flag: true, subPathnodeList });
             });
 
@@ -328,17 +329,31 @@ class Platform extends Pathnode {
             let open = [root];
             let stack = [];
 
-            while (open.length) {
-                let curr = open.pop();
-                if (-1 != curr.findUserIndex(username)) {
-                    stack.push(curr);
-                    open = curr.children;
+            let target:Pathnode;
+            let visit = (node:Pathnode)=>{
+                if(target){return;}
+                if(node.findUserIndex(username)>=0){
+                    target=node;
+                    return ;
+                }else{
+                    node.children.forEach(n=>visit(n));
                 }
+            };
+            while(target){
+                stack.push(target);
+                target=target.father;
             }
+            // while (open.length) {
+            //     let curr = open.pop();
+            //     if (-1 != curr.findUserIndex(username)) {
+            //         stack.push(curr);
+            //         open = curr.children;
+            //     }
+            // }
 
             // logger.debug(`all sockets: ${_.map(io.sockets.sockets,n=>n.id)}`);
             // logger.debug(socket.id, !!socket);
-            stack.reverse().forEach((node: Pathnode) => {
+            stack./*reverse().*/forEach((node: Pathnode) => {
                 let pathnodeName = node.name;
                 socket.leave(pathnodeName);
                 if (PathnodeType.platform == pathnodeType) {

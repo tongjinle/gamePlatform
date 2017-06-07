@@ -1,4 +1,15 @@
+/*
+    UserCache完成对登录用户信息的缓存
+    1 CACHE_EXPIRE缓存时间
+    2 genToken获取8位长度的唯一标识
+    3 refresh刷新Token的缓存时间(用户在登录之后的一些action必定需要刷新缓存时间)
+    4 isValid用以检测某个Token是否合法
+*/
+
+
 import * as _ from 'underscore';
+import { CACHE_EXPIRE } from './conf';
+
 
 interface CacheItem<T> { data: T, token: string, expire: number };
 
@@ -8,11 +19,13 @@ interface IUser {
 
 class UserCache {
     private cache: CacheItem<IUser>[];
-    private CACHE_EXPIRE: number = 2 * 60 * 60 * 1000;
+    // 缓存时间
+    private CACHE_EXPIRE: number;
 
 
     constructor() {
         this.cache = [];
+        this.CACHE_EXPIRE = CACHE_EXPIRE;
     }
 
     add(username: string): string {
@@ -25,6 +38,10 @@ class UserCache {
 
     remove(username: string) {
         this.cache = _.filter(this.cache, item => item.data.name != username);
+    }
+
+    find(username: string): CacheItem<IUser> {
+        return _.find(this.cache, item => item.data.name == username);
     }
 
     // token是否合法

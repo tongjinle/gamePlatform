@@ -16,7 +16,7 @@ let mockUserList = [
 ];
 // ###
 
-class UserCenter {
+export class UserCenter {
 
     constructor() {
         // code...

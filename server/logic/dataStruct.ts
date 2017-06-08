@@ -2,6 +2,8 @@ import * as SocketServer from "socket.io";
 import PathnodeType from './pathnodeType';
 import Channel from './channel';
 // ##### to client event #####
+
+// 登录
 export interface IReqLoginData {
 	username: string;
 	password: string;
@@ -12,18 +14,25 @@ export interface IResLoginData {
 	username:string;
 }
 
+// 进入房间
+export interface IReqUserJoinData {
+	pathnodeName: string;
+}
+
 export interface IResUserJoinData {
 	flag:boolean;
 	pathnodeName: string;
 	username: string;
 }
 
+// 退出房间
 export interface IResUserLeaveData {
 	flag:boolean;
 	pathnodeName: string;
 	username: string;
 }
 
+// 聊天
 export interface IReqChat{
 	message:string;
 	// to是对某人的私人聊天
@@ -39,36 +48,3 @@ export interface IResChat{
 	timestamp:number;
 }
 
-// ##### platform event #####
-export interface ILoginData {
-	username: string;
-	socketId: string;
-}
-
-export interface ILogoutData {
-	username: string;
-	socketId: string;
-}
-
-export interface IChannelAddData{
-	channel:Channel
-}
-export interface IChannelRemoveData{
-	channel:Channel
-
-}
-
-export interface IUserJoinData {
-	pathnodeName: string;
-	pathnodeType: PathnodeType;	
-	username: string;
-	socketId: string;
-}
-
-
-export interface IUserLeaveData {
-	pathnodeName: string;
-	pathnodeType: PathnodeType;
-	username: string;
-	socket: SocketIO.Socket;
-}

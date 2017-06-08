@@ -11,7 +11,22 @@ class App {
 	constructor() {
 		let pl = this.platfrom = new Platform();
 		pl.initByConf(pfConfig);
+
+        this.dict = {};
+        this.bindSocket();
+
 	}
+
+    dict:{[socketId:string]:string};
+    
+    bindList:[(app:App,socket:SocketServer.Client)=>void];
+
+    io:SocketIO.Server;
+
+    private bindSocket(){
+        
+    }
+
 }
 
 

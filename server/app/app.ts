@@ -9,48 +9,36 @@ import {
     UserCenter,
     getUserCenter
 } from "../db/userCenter/userCenter";
+import { User } from './user';
+import logger from "../logic/logIns";
 
 
-class App {
+
+export default class App {
+    serv: Http.Server;
+    io: SocketIO.Server;
     platfrom: Platform;
     constructor() {
-        let pl = this.platfrom = new Platform();
-        pl.initByConf(pfConfig);
+        // let pl = this.platfrom = new Platform();
+        // pl.initByConf(pfConfig);
 
-        this.usCenter = getUserCenter();
+        // this.usCenter = getUserCenter();
 
-        this.dict = {};
-        this.bindSocket();
+        this.serv = Http.createServer()
+        this.io = SocketServer(this.serv);
 
-    }
-
-    usCenter: UserCenter;
-
-    dict: { [socketId: string]: string };
-
-    bindList: [(app: App, socket: SocketIO.Socket) => void];
-
-    io: SocketIO.Server;
-
-    private bindSocket() {
         this.io.on("connect", (so) => {
-            _.each(this.bindList, fn => fn(this, so));
+            let us = new User(so);
+            us.app = this;
         });
     }
 
-    // 登陆
-    login(data: dataStruct.IReqLoginData) {
-        let { username, password } = data;
-        this.usCenter.login(username, password, (data) => {
-            let { flag, token } = data;
-            if (flag) {
-                
-            }
-        });
-    }
+
+
+
+
 
 }
 
 
-let app = new App();
 

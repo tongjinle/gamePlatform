@@ -20,6 +20,8 @@ export default class App {
     platfrom: Platform;
     // 根节点
     root: Pathnode;
+    // 平台上所有用户
+    userList: User[];
     constructor() {
         // let pl = this.platfrom = new Platform();
         // pl.initByConf(pfConfig);
@@ -28,10 +30,14 @@ export default class App {
 
         this.serv = Http.createServer()
         this.io = SocketServer(this.serv);
+        this.userList = [];
 
         this.io.on("connect", (so) => {
             let us = new User(so);
             us.app = this;
+
+            //
+            this.userList.push(us);
         });
 
         this.initNodes();
@@ -48,7 +54,12 @@ export default class App {
         return undefined;
     }
 
-    
+
+    // 获取某个房间的所有用户
+    getUserList(nodeName:string):User{
+        return _.filter(this.userList, us => us.currNode == nodeName);
+    }
+
 
 }
 

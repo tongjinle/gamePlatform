@@ -65,7 +65,7 @@ export class User {
     path: string[];
 
     // 当前节点 
-    public get currNode(): string {
+    public get currNodeName(): string {
         return this.status == EUserStatus.PreLogin ?
             undefined :
             this.path[this.path.length - 1];
@@ -150,7 +150,9 @@ export class User {
 
     // 查询当前房间用户
     queryUserList(): void {
-        
+        let userList = this.app.getUserList(this.currNodeName);
+        let data: dataStruct.IResUserList = [];
+        this.so.on(TO_CLIENT_EVENTS.USER_LIST, data);
     }
 
 
@@ -159,7 +161,7 @@ export class User {
         // todo 
         // 判断是否有这么个节点,和是否能进入
         let node = this.app.getNodeByName(nodeName);
-        if (node && node.father.name == this.currNode) {
+        if (node && node.father.name == this.currNodeName) {
             this.path.push(nodeName);
             let data: dataStruct.IResUserJoinData = {
                 flag: true,
@@ -175,7 +177,7 @@ export class User {
 
     // 退出节点
     leaveNode(): boolean {
-        let nodeName = this.currNode;
+        let nodeName = this.currNodeName;
         if (nodeName) {
             this.path.pop();
             let data: dataStruct.IResUserLeaveData = {

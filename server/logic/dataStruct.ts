@@ -11,15 +11,15 @@ export interface IReqLoginData {
 
 export interface IResLoginData {
 	flag: boolean;
-	username:string;
+	username: string;
 }
 
 // 登出
-export interface IReqLogoutData{
+export interface IReqLogoutData {
 
 }
 
-export interface IResLogoutData{
+export interface IResLogoutData {
 	flag: boolean;
 }
 
@@ -29,31 +29,37 @@ export interface IReqUserJoinData {
 }
 
 export interface IResUserJoinData {
-	flag:boolean;
+	flag: boolean;
 	pathnodeName: string;
 	username: string;
 }
 
 // 退出房间
 export interface IResUserLeaveData {
-	flag:boolean;
+	flag: boolean;
 	pathnodeName: string;
 	username: string;
 }
 
 // 聊天
-export interface IReqChat{
-	message:string;
+export interface IReqChat {
+	message: string;
 	// to是对某人的私人聊天
-	to?:string;
+	to?: string;
 }
 
-export interface IResChat{
-	flag:boolean;
-	username:string;
-	message:string;
+export interface IResChat {
+	flag: boolean;
+	username: string;
+	message: string;
 	// to是对某人的私人聊天
-	isPrivate:boolean;	
-	timestamp:number;
+	isPrivate: boolean;
+	timestamp: number;
 }
 
+
+// 用户列表
+export interface IResUserList {
+	[index: number]: { username: string };
+	length: number
+}

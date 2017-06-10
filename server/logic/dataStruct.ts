@@ -14,6 +14,15 @@ export interface IResLoginData {
 	username:string;
 }
 
+// 登出
+export interface IReqLogoutData{
+
+}
+
+export interface IResLogoutData{
+	flag: boolean;
+}
+
 // 进入房间
 export interface IReqUserJoinData {
 	pathnodeName: string;

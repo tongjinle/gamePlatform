@@ -11,13 +11,15 @@ import {
 } from "../db/userCenter/userCenter";
 import { User } from './user';
 import logger from "../logic/logIns";
-
+import Pathnode from '../logic/pathnode';
 
 
 export default class App {
     serv: Http.Server;
     io: SocketIO.Server;
     platfrom: Platform;
+    // 根节点
+    root: Pathnode;
     constructor() {
         // let pl = this.platfrom = new Platform();
         // pl.initByConf(pfConfig);
@@ -31,12 +33,22 @@ export default class App {
             let us = new User(so);
             us.app = this;
         });
+
+        this.initNodes();
+    }
+
+    // 初始化平台的所有节点
+    initNodes():void{
+        // todo
     }
 
 
+    // 通过名字获取某个节点
+    getNodeByName(nodename:string):Pathnode{
+        return undefined;
+    }
 
-
-
+    
 
 }
 

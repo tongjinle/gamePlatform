@@ -33,18 +33,30 @@ export class User {
 
         // 连接,但是尚未登陆
         if (EUserStatus.PreLogin == status) {
+            // 监听
             so.on(TO_CLIENT_EVENTS.LOGIN, this.login);
             return;
         }
 
         // 在线
         if (EUserStatus.OnLine == status) {
+            // 监听
+            so.on('disconnect', this.logout);
+            so.on(TO_CLIENT_EVENTS.CHAT, this.chat);
+            so.on(TO_CLIENT_EVENTS.USER_JOIN, this.enterNode);
+            so.on(TO_CLIENT_EVENTS.USER_LEAVE, this.leaveNode);
+            // 反监听
             so.removeListener(TO_CLIENT_EVENTS.LOGIN, this.login);
             return;
         }
 
         // 离线
         if (EUserStatus.OffLine == status) {
+            // 反监听
+            so.removeListener('disconnect', this.logout);
+            so.removeListener(TO_CLIENT_EVENTS.CHAT, this.chat);
+            so.removeListener(TO_CLIENT_EVENTS.USER_JOIN, this.enterNode);
+            so.removeListener(TO_CLIENT_EVENTS.USER_LEAVE, this.leaveNode);
             return;
         }
     }
@@ -52,7 +64,7 @@ export class User {
     // 房间路径
     path: string[];
 
-    // 当前路径 
+    // 当前节点 
     public get currNode(): string {
         return this.status == EUserStatus.PreLogin ?
             undefined :
@@ -75,18 +87,21 @@ export class User {
         let { username, password } = data;
         usCenter.login(username, password, (data => {
             let { flag } = data;
-            if (flag) {
-                this.status = EUserStatus.OnLine;
 
-                // 通知客户端--登录结果
-                {
-                    let data: dataStruct.IResLoginData = {
-                        flag,
-                        username
-                    };
-                    this.so.emit(TO_CLIENT_EVENTS.LOGIN, data);
-                }
-                // 进入"platform"节点
+            // 通知客户端--登录结果
+            {
+                let data: dataStruct.IResLoginData = {
+                    flag,
+                    username
+                };
+                this.so.emit(TO_CLIENT_EVENTS.LOGIN, data);
+            }
+
+            if (flag) {
+                this.username = username;
+                // 状态切换
+                this.status = EUserStatus.OnLine;
+                // 进入"platform"节点--自动
                 {
                     let flag = this.enterNode("platform");
                     if (flag) {
@@ -103,17 +118,87 @@ export class User {
         }));
     }
 
+    // 登出
+    logout(data: dataStruct.IReqLogoutData) {
+        usCenter.logout(this.username, (data) => {
+            let { flag } = data;
 
-    enterNode(nodename: string): boolean {
-        // todo 
-        // 判断是否有这么个节点,和是否能进入
+            // 通知客户端--登出结果
+            {
+                let data: dataStruct.IResLogoutData = {
+                    flag
+                };
+                this.so.emit(TO_CLIENT_EVENTS.LOGOUT, data);
+            }
 
-        this.path.push(nodename);
-        return true;
+            if (flag) {
+                // 状态切换
+                this.status = EUserStatus.OffLine;
+
+                // 退出所有节点
+                while (this.leaveNode()) { }
+            }
+        });
     }
 
+    // 断线
+    disconnect() {
+        usCenter.logout(this.username, (data) => {
+
+        });
+    }
+
+    // 查询当前房间用户
+    queryUserList(): void {
+        
+    }
+
+
+    // 进入节点
+    enterNode(nodeName: string): boolean {
+        // todo 
+        // 判断是否有这么个节点,和是否能进入
+        let node = this.app.getNodeByName(nodeName);
+        if (node && node.father.name == this.currNode) {
+            this.path.push(nodeName);
+            let data: dataStruct.IResUserJoinData = {
+                flag: true,
+                pathnodeName: nodeName,
+                username: this.username
+            };
+            this.so.join(nodeName);
+            this.app.io.to(nodeName).emit(TO_CLIENT_EVENTS.USER_JOIN, data);
+            return true;
+        }
+        return false;
+    }
+
+    // 退出节点
     leaveNode(): boolean {
-        return this.path.pop() !== undefined;
+        let nodeName = this.currNode;
+        if (nodeName) {
+            this.path.pop();
+            let data: dataStruct.IResUserLeaveData = {
+                flag: true,
+                pathnodeName: nodeName,
+                username: this.username
+            };
+            this.so.leave(nodeName);
+            this.app.io.to(nodeName).emit(TO_CLIENT_EVENTS.USER_LEAVE, data);
+            return true;
+        }
+        return false;
+    }
+
+    // 聊天
+    chat(): void {
+
+    }
+
+
+    // 游戏操作
+    gameAct(): void {
+
     }
 
 

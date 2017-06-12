@@ -9,16 +9,12 @@
 
 import * as _ from 'underscore';
 import { CACHE_EXPIRE } from './conf';
-
+import { User } from '../../app/user';
 
 interface CacheItem<T> { data: T, token: string, expire: number };
 
-interface IUser {
-    name: string;
-}
-
 class UserCache {
-    private cache: CacheItem<IUser>[];
+    private cache: CacheItem<User>[];
     // 缓存时间
     private CACHE_EXPIRE: number;
 
@@ -28,20 +24,23 @@ class UserCache {
         this.CACHE_EXPIRE = CACHE_EXPIRE;
     }
 
-    add(username: string): string {
+    add(user: User): string {
         let token = this.genToken();
         let expire = this.genExpire();
-        let us = { name: username } as IUser;
-        this.cache.push({ data: us, token, expire });
+        this.cache.push({ data: user, token, expire });
         return token;
     }
 
     remove(username: string) {
-        this.cache = _.filter(this.cache, item => item.data.name != username);
+        this.cache = _.filter(this.cache, item => item.data.username != username);
     }
 
-    find(username: string): CacheItem<IUser> {
-        return _.find(this.cache, item => item.data.name == username);
+    find(username: string): CacheItem<User> {
+        return _.find(this.cache, item => item.data.username == username);
+    }
+
+    findByNodeName(nodeName:string):CacheItem<User>[]{
+        return _.filter(this.cache,item=>item.data.currNodeName == nodeName);
     }
 
     // token是否合法
@@ -60,7 +59,7 @@ class UserCache {
     // 通过token寻找username
     getUsername(token: string): string {
         let item = this.findCache(token);
-        return item ? item.data.name : undefined;
+        return item ? item.data.username : undefined;
     }
 
     // 刷新token
@@ -79,7 +78,7 @@ class UserCache {
         return Math.floor(Math.random() * Math.pow(36, len)).toString(36);
     }
 
-    private findCache(token: string): CacheItem<IUser> {
+    private findCache(token: string): CacheItem<User> {
         return _.find(this.cache, item => item.token == token);
     }
 

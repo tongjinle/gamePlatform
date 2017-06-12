@@ -55,12 +55,6 @@ export default class App {
     }
 
 
-    // 获取某个房间的所有用户
-    getUserList(nodeName:string):User{
-        return _.filter(this.userList, us => us.currNode == nodeName);
-    }
-
-
 }
 
 

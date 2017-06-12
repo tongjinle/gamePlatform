@@ -23,21 +23,21 @@ export class UserCenter {
     }
 
 
-    login(username: string, password: string, cb?: (data: { flag: boolean, token: string }) => void) {
+    login(username: string, password: string, cb?: (data: { flag: boolean }) => void) {
         if (!!usCache.find(username)) {
-            cb && cb({ flag: false, token: undefined });
+            cb && cb({ flag: false });
             return;
         }
 
         if (!_.find(mockUserList, item => item.username == username && item.password == password)) {
-            cb && cb({ flag: false, token: undefined });
+            cb && cb({ flag: false });
             return;
 
         }
 
-        let token = usCache.add(username);
+
         let flag = true;
-        cb && cb({ flag, token });
+        cb && cb({ flag });
     }
 
     logout(username: string, cb?: (data: { flag: boolean }) => void) {

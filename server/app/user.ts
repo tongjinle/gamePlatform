@@ -10,6 +10,10 @@ import {
     getUserCenter
 } from "../db/userCenter/userCenter";
 let usCenter = getUserCenter();
+import {
+    getUserCache
+} from "../db/userCenter/userCache"
+let usCache = getUserCache();
 
 export enum EUserStatus {
     PreLogin,
@@ -99,6 +103,8 @@ export class User {
 
             if (flag) {
                 this.username = username;
+                // 装入缓存
+                usCache.add(this);
                 // 状态切换
                 this.status = EUserStatus.OnLine;
                 // 进入"platform"节点--自动
@@ -150,9 +156,15 @@ export class User {
 
     // 查询当前房间用户
     queryUserList(): void {
-        let userList = this.app.getUserList(this.currNodeName);
         let data: dataStruct.IResUserList = [];
-        this.so.on(TO_CLIENT_EVENTS.USER_LIST, data);
+
+        usCache.findByNodeName(this.currNodeName)
+            .forEach(item => {
+                data.push({
+                    username: item.data.username
+                });
+            });
+        this.so.emit(TO_CLIENT_EVENTS.USER_LIST, data);
     }
 
 

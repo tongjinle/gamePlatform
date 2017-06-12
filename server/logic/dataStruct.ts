@@ -59,7 +59,8 @@ export interface IResChat {
 
 
 // 用户列表
-export interface IResUserList {
-	[index: number]: { username: string };
-	length: number
+export interface IResUserInfo{
+	username:string
+}
+export interface IResUserList extends Array<IResUserInfo> {
 }

@@ -50,7 +50,7 @@ export interface IReqChat {
 
 export interface IResChat {
 	flag: boolean;
-	username: string;
+	from: string;
 	message: string;
 	// to是对某人的私人聊天
 	isPrivate: boolean;

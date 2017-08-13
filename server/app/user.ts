@@ -205,7 +205,33 @@ export class User {
     }
 
     // 聊天
-    chat(): void {
+    chat(data: dataStruct.IReqChat): void {
+        let { message, to } = data;
+
+        let nodeName = this.currNodeName;
+        let username = this.username;
+        let timestamp = Date.now();
+
+        if (to) {
+            let data: dataStruct.IResChat = {
+                flag: true,
+                from:username,
+                message,
+                isPrivate: true,
+                timestamp
+            };
+            this.so.broadcast.to(nodeName).emit(TO_CLIENT_EVENTS.CHAT, data);
+        } else {
+            let data: dataStruct.IResChat = {
+                flag: true,
+                from:username,
+                message,
+                isPrivate: false,
+                timestamp
+            };
+            this.app.io.to(nodeName).emit(TO_CLIENT_EVENTS.CHAT, data);
+
+        }
 
     }
 

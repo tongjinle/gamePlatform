@@ -1,8 +1,8 @@
-###### REQUEST #####
 1. 登录
+1.1 当前用户
 route:"login"
 req:{
-	username:string,
+	userName:string,
 	password:string
 }
 res:{
@@ -10,25 +10,31 @@ res:{
 	token:string
 }
 
+1.2 其他用户
+push:{
+	userName:string
+}
 
-2. 获取节点所有用户
-route:"userlist"
+2. 登出
+2.1 当前用户
+route:"logout"
+req:null
+res:{
+	flag:boolean,
+	userName:string
+}
+
+3. 获取节点所有用户
+route:"userList"
 req:{
 	token:string
 	pathnodeName:string
 }
 res:{
 	flag:boolean,
-	userlist:string[]
+	userList:string[]
 }
 
-3. 登出
-route:"logout"
-req:null
-res:{
-	flag:boolean,
-	username:string
-}
 
 ##### NOTIFY ######
 1. 发送聊天信息
@@ -68,12 +74,12 @@ res:{
 route:"onUserJoin"
 res:{
 	pathnodeName:string,
-	username:string
+	userName:string
 }
 
 3. 用户离开
 route:"onUserLeave"
 res:{
 	pathnodeName:string,
-	username:string
+	userName:string
 }

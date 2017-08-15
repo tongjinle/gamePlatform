@@ -5,13 +5,17 @@ import Channel from './channel';
 
 // 登录
 export interface IReqLoginData {
-	username: string;
+	userName: string;
 	password: string;
 }
 
 export interface IResLoginData {
 	flag: boolean;
-	username: string;
+	userName: string;
+}
+
+export interface INotifyLoginData {
+	userName: string;
 }
 
 // 登出
@@ -23,6 +27,10 @@ export interface IResLogoutData {
 	flag: boolean;
 }
 
+export interface INotifyLogoutData{
+	userName: string;
+}
+
 // 进入房间
 export interface IReqUserJoinData {
 	pathnodeName: string;
@@ -31,14 +39,14 @@ export interface IReqUserJoinData {
 export interface IResUserJoinData {
 	flag: boolean;
 	pathnodeName: string;
-	username: string;
+	userName: string;
 }
 
 // 退出房间
 export interface IResUserLeaveData {
 	flag: boolean;
 	pathnodeName: string;
-	username: string;
+	userName: string;
 }
 
 // 聊天
@@ -59,8 +67,8 @@ export interface IResChat {
 
 
 // 用户列表
-export interface IResUserInfo{
-	username:string
+export interface IResUserInfo {
+	userName: string
 }
 export interface IResUserList extends Array<IResUserInfo> {
 }

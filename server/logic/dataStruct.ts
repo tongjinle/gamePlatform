@@ -20,51 +20,67 @@ export interface INotifyLoginData {
 
 // 登出
 export interface IReqLogoutData {
-
 }
 
 export interface IResLogoutData {
 	flag: boolean;
 }
 
-export interface INotifyLogoutData{
+export interface INotifyLogoutData {
 	userName: string;
 }
 
 // 进入房间
-export interface IReqUserJoinData {
-	pathnodeName: string;
+export interface IReqUserJoinRoomData {
+	roomName: string;
 }
 
-export interface IResUserJoinData {
+export interface IResUserJoinRoomData {
 	flag: boolean;
-	pathnodeName: string;
+	roomName: string;
+}
+
+export interface INotifyJoinRoomData {
+	roomName: string;
 	userName: string;
 }
 
 // 退出房间
-export interface IResUserLeaveData {
+export interface IReqUserLeaveRoomData {
+}
+
+export interface IResUserLeaveRoomData {
 	flag: boolean;
-	pathnodeName: string;
+}
+
+export interface INotifyLeaveRoomData {
+	roomName: string;
 	userName: string;
 }
 
+
 // 聊天
+// '世界聊天' | '房间聊天' | '个人聊天'
 export interface IReqChat {
 	message: string;
+	type: 'world' | 'room' | 'personal';
 	// to是对某人的私人聊天
 	to?: string;
 }
 
 export interface IResChat {
 	flag: boolean;
+}
+
+export interface INotifyChat{
 	from: string;
+	to?: string;
 	message: string;
 	// to是对某人的私人聊天
 	isPrivate: boolean;
-	timestamp: number;
-}
+	timeStamp: number;
 
+}
 
 // 用户列表
 export interface IResUserInfo {

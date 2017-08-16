@@ -125,13 +125,13 @@ export class User {
     }
 
     // 登出
-    logout(data: dataStruct.IReqLogoutData) {
+    logout(data: any) {
         usCenter.logout(this.username, (data) => {
             let { flag } = data;
 
             // 通知客户端--登出结果
             {
-                let data: dataStruct.IResLogoutData = {
+                let data= {
                     flag
                 };
                 this.so.emit(TO_CLIENT_EVENTS.LOGOUT, data);
@@ -156,7 +156,7 @@ export class User {
 
     // 查询当前房间用户
     queryUserList(): void {
-        let data: dataStruct.IResUserList = [];
+        let data:any = [];
 
         usCache.findByNodeName(this.currNodeName)
             .forEach(item => {
@@ -213,18 +213,18 @@ export class User {
         let timestamp = Date.now();
 
         if (to) {
-            let data: dataStruct.IResChat = {
+            let data = {
                 flag: true,
-                from:username,
+                from: username,
                 message,
                 isPrivate: true,
                 timestamp
             };
             this.so.broadcast.to(nodeName).emit(TO_CLIENT_EVENTS.CHAT, data);
         } else {
-            let data: dataStruct.IResChat = {
+            let data= {
                 flag: true,
-                from:username,
+                from: username,
                 message,
                 isPrivate: false,
                 timestamp

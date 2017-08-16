@@ -2,89 +2,73 @@ import * as SocketServer from "socket.io";
 import PathnodeType from './pathnodeType';
 import Channel from './channel';
 // ##### to client event #####
-
-// 登录
 export interface IReqLoginData {
-	userName: string;
+	username: string;
 	password: string;
 }
 
 export interface IResLoginData {
 	flag: boolean;
-	userName: string;
+	username:string;
 }
 
-export interface INotifyLoginData {
-	userName: string;
+export interface IResUserJoinData {
+	flag:boolean;
+	pathnodeName: string;
+	username: string;
 }
 
-// 登出
-export interface IReqLogoutData {
+export interface IResUserLeaveData {
+	flag:boolean;
+	pathnodeName: string;
+	username: string;
 }
 
-export interface IResLogoutData {
-	flag: boolean;
-}
-
-export interface INotifyLogoutData {
-	userName: string;
-}
-
-// 进入房间
-export interface IReqUserJoinRoomData {
-	roomName: string;
-}
-
-export interface IResUserJoinRoomData {
-	flag: boolean;
-	roomName: string;
-}
-
-export interface INotifyJoinRoomData {
-	roomName: string;
-	userName: string;
-}
-
-// 退出房间
-export interface IReqUserLeaveRoomData {
-}
-
-export interface IResUserLeaveRoomData {
-	flag: boolean;
-}
-
-export interface INotifyLeaveRoomData {
-	roomName: string;
-	userName: string;
-}
-
-
-// 聊天
-// '世界聊天' | '房间聊天' | '个人聊天'
-export interface IReqChat {
-	message: string;
-	type: 'world' | 'room' | 'personal';
+export interface IReqChat{
+	message:string;
 	// to是对某人的私人聊天
-	to?: string;
+	to?:string;
 }
 
-export interface IResChat {
-	flag: boolean;
-}
-
-export interface INotifyChat{
-	from: string;
-	to?: string;
-	message: string;
+export interface IResChat{
+	flag:boolean;
+	username:string;
+	message:string;
 	// to是对某人的私人聊天
-	isPrivate: boolean;
-	timeStamp: number;
+	isPrivate:boolean;	
+	timestamp:number;
+}
+
+// ##### platform event #####
+export interface ILoginData {
+	username: string;
+	socketId: string;
+}
+
+export interface ILogoutData {
+	username: string;
+	socketId: string;
+}
+
+export interface IChannelAddData{
+	channel:Channel
+}
+export interface IChannelRemoveData{
+	channel:Channel
 
 }
 
-// 用户列表
-export interface IResUserInfo {
-	userName: string
+export interface IUserJoinData {
+	pathnodeName: string;
+	pathnodeType: PathnodeType;	
+	username: string;
+	socketId: string;
 }
-export interface IResUserList extends Array<IResUserInfo> {
+
+
+export interface IUserLeaveData {
+	pathnodeName: string;
+	pathnodeType: PathnodeType;
+	username: string;
+	socket: SocketIO.Socket;
 }
